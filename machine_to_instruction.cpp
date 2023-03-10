@@ -12,6 +12,6 @@ void main()
     {
         fbin>>t;
         fbout<<"0x"<< std::hex<< std::uppercase <<i<<" "<<t<< std::endl;
-        i++;
+        i=i+4;
     }
 }
