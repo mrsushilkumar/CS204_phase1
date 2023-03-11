@@ -131,12 +131,12 @@ void decode()
   }
   immB[12]=Inst[31];  //immidiate of B type
   
-  for (int i = 0; i < 20; i++)//immidiate of U type
+  for (int i = 0; i < 20; i++) //immidiate of U type
   {
     immU[i+12]=Inst[i+12];
   }//immidiate of U type
 
-  for (int i = 0; i < 8; i++)//immidiate of J type
+  for (int i = 0; i < 8; i++) //immidiate of J type
   {
     immJ[i+12]=Inst[i+12];
   }
