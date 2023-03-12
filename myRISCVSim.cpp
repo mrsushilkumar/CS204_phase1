@@ -310,8 +310,13 @@ void execute()
   }
 }
 // perform the memory operation
-void mem()
-{
+void mem(){
+  int result_mem,result_alu;
+   if(opcode.to_ulong()==3){
+      result_mem=MEM[result_alu];
+   }else if(opcode.to_ulong()==35){
+       MEM[result_alu]=X[rs2.to_ulong()];
+   }
 }
 // writes the results back to register file
 void write_back()
