@@ -228,10 +228,10 @@ void execute()
       switch (funct3.to_ulong())
       {
       case 0: // sub
-
+        resultALU = X[rs1.to_ulong()]-X[rs2.to_ulong()];
         break;
       case 5: // sra
-
+        resultALU = X[rs1.to_ulong()]>>X[rs2.to_ulong()];
         break;
       default:
         break;
@@ -241,26 +241,40 @@ void execute()
       switch (funct3.to_ulong())
       {
       case 0: // add
-
+        resultALU = X[rs1.to_ulong()] + X[rs2.to_ulong()];
         break;
       case 4: // xor
-
+        resultALU = X[rs1.to_ulong() ] ^ X[rs2.to_ulong()];
         break;
       case 6: // or
-
+        resultALU = X[rs1.to_ulong()] | X[rs2.to_ulong()];
         break;
       case 7: // and
+        resultALU = X[rs1.to_ulong()] & X[rs2.to_ulong()];
         break;
       case 1: // sll
+        resultALU = X[rs1.to_ulong()] << X[rs2.to_ulong()];
         break;
       case 5: // srl
+
         break;
       case 2: // slt
+        if (X[rs1.to_ulong()] < X[rs2.to_ulong()])
+        {
+          resultALU = 1;
+        }
+        else
+        {
+          resultALU = 0;
+        }
+        
         break;
+
       default:
         break;
       }
       break;
+
     default:
       break;
     }
@@ -271,13 +285,17 @@ void execute()
     switch (funct3.to_ulong())
     {
     case 0://addi
-
+      resultALU = X[rs1.to_ulong()] + (int32_t) imm.to_ulong();
       break;
 
     case 7://andi
+      resultALU = X[rs1.to_ulong()] & (int32_t) imm.to_ulong();
       break;
 
     case 6://ori
+      resultALU = X[rs1.to_ulong()] | (int32_t) imm.to_ulong();
+      break;
+
     default:
       break;
     }
@@ -288,22 +306,92 @@ void execute()
     switch (funct3.to_ulong())
     {
     case 0://lb
-      
+      resultALU = X[rs1.to_ulong()] + (int32_t) imm.to_ulong(); 
       break;
     
     case 1://lh
-
+      resultALU = X[rs1.to_ulong()] + (int32_t) imm.to_ulong();
       break;
 
     case 2://lw
-
+      resultALU = X[rs1.to_ulong()] + (int32_t) imm.to_ulong();
       break;
     
     default:
       break;
     }
-    
+
     break;//load type operations
+
+  case 103://jalr 
+    switch (funct3.to_ulong())
+    {
+    case 0://jalr
+      resultALU = X[rs1.to_ulong()] + (int32_t) imm.to_ulong();
+      break;
+    
+    default:
+      break;
+    }
+
+    break;
+
+  case 35://S type operation
+    switch (funct3.to_ulong())
+    {
+    case 0://sb
+      resultALU = X[rs1.to_ulong()] + (int32_t) imm.to_ulong();    
+      break;
+
+    case 1://sh
+      resultALU = X[rs1.to_ulong()] + (int32_t) imm.to_ulong();
+      break;
+
+    case 2://sw
+      resultALU = X[rs1.to_ulong()] + (int32_t) imm.to_ulong();
+      break;
+    
+    default:
+      break;
+    }
+    break;
+
+  case 99://B type operations
+    switch (funct3.to_ulong())
+    {
+    case 0://beq
+      resultALU = PC + (int32_t) imm.to_ulong();
+      break;
+    case 1://bne
+      resultALU = PC + (int32_t) imm.to_ulong();
+      break;
+
+    case 4://blt
+      resultALU = PC + (int32_t) imm.to_ulong();
+      break;
+
+    case 5://bge
+      resultALU = PC + (int32_t) imm.to_ulong();
+      break;
+    
+    default:
+      break;
+    }
+
+    break;
+
+  case 55://U type (lui)
+    resultALU = (int32_t) imm.to_ulong();
+    break;
+
+  case 23://U type (auipc)
+    resultALU = PC + (int32_t) imm.to_ulong();
+    break;
+
+  case 111://J type (jal)
+    
+      resultALU = PC + (int32_t) imm.to_ulong();
+    break;
 
   default:
     break;
@@ -321,6 +409,66 @@ void mem(){
 // writes the results back to register file
 void write_back()
 {
+  PC = PC + 4;
+  switch (opcode.to_ulong())
+  {
+  case 51://R type
+    X[rd.to_ulong()] = resultALU;
+    break;
+  case 19:// I type
+    X[rd.to_ulong()] = resultALU;
+    break;
+  case 3:// Load type    uncomplete
+    break;
+  case 99://B type
+    switch (funct3.to_ulong())
+    {
+    case 0://beq
+      if (X[rs1.to_ulong()]==X[rs2.to_ulong()])
+      {
+        PC = resultALU;
+      }
+      break;
+    case 1://bne
+      if (X[rs1.to_ulong()]!= X[rs2.to_ulong()])
+      {
+        PC = resultALU;
+      }
+      break;
+    case 4://blt
+      if (X[rs1.to_ulong()]<X[rs2.to_ulong()])
+      {
+        PC = resultALU;
+      }
+      break;
+    case 5://bge
+      if (X[rs1.to_ulong()]>=X[rs2.to_ulong()])
+      {
+        PC = resultALU;
+      }
+      break;
+    default:
+      break;
+    }
+    break;
+  case 111://jal
+    X[rd.to_ulong()] = PC;
+    PC = resultALU;
+    break;
+  case 103://jalr
+    X[rd.to_ulong()] = PC;
+    PC = resultALU;
+    break;
+  case 55://lui
+    X[rd.to_ulong()] = resultALU;
+    break;
+  case 23://auipc
+    X[rd.to_ulong()] = resultALU;
+    break;
+
+  default:
+    break;
+  }
 }
 
 void run_riscvsim()
