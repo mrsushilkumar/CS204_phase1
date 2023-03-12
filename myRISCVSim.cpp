@@ -53,8 +53,28 @@ void reset_proc()
 }
 
 // reads from the instruction memory and updates the instruction register
-void fetch()
-{
+void fetch(){
+    string x,s;
+    s="0x"+(to_string(PC));
+    fstream FileName;                   
+    FileName.open("input.mc", ios::in);         
+    if(!FileName){                        
+        cout<<"File doesn’t exist.";          
+    }else{
+        while (1) {         
+            FileName>>x;              
+            if(FileName.eof())          
+                break;
+            if(x==s){
+              FileName>>x;
+              x.erase(x.begin(),x.begin()+2);
+              unsigned int num =  stoul(x, nullptr, 16); 
+              Inst=num; 
+              break;    
+            }              
+        }
+    }
+    FileName.close();
 }
 // reads the instruction register, reads operand1, operand2 fromo register file, decides the operation to be performed in execute stage
 void decode()
