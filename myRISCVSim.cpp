@@ -13,24 +13,25 @@ Date:
 /* myRISCVSim.cpp
    Purpose of this file: implementation file for myRISCVSim
 */
-
+#include <bits/stdc++.h>
 #include <iostream>
 #include <sstream>
 #include <string>
-#include <bits/stdc++.h>
+
 using namespace std;
 
 // current instruction
-int PC;
+int PC=0;
 
 //result after execution
-int result;
+
 int resultALU,resultMEM;
 // Register file
-static signed int X[32];
+vector<int> X(32, 0);
 // flags
 // memory
-static unsigned char MEM[4000];
+// static unsigned char MEM[4000];
+vector<int> MEM(100000, 0);
 
 // intermediate datapath and control path signals
 static unsigned int instruction_word;
@@ -48,14 +49,14 @@ bitset<3> funct3;
 
 // it is used to set the reset values
 // reset all registers and memory content to 0
-void reset_proc()
-{
-}
+
 
 // reads from the instruction memory and updates the instruction register
 void fetch(){
     string x,s;
-    s="0x"+(to_string(PC));
+   stringstream ss;
+  ss << hex << PC;
+  s = "0x" + ss.str();
     fstream FileName;                   
     FileName.open("input.mc", ios::in);         
     if(!FileName){                        
@@ -63,8 +64,10 @@ void fetch(){
     }else{
         while (1) {         
             FileName>>x;              
-            if(FileName.eof())          
-                break;
+           if (FileName.eof()){
+             loop=0;
+             break;
+             }
             if(x==s){
               FileName>>x;
               x.erase(x.begin(),x.begin()+2);
@@ -104,7 +107,7 @@ void decode()
     funct7[i] = Inst[i + 25];
   }
   
-  if(opcode.to_ulong()==19 | opcode.to_ulong()==3 | opcode.to_ulong()==103)
+  if(opcode.to_ulong()==19 || opcode.to_ulong()==3 ||opcode.to_ulong()==103)
   {
     for (int i = 0; i < 12; i++) // immidaite of type I
     {
@@ -153,6 +156,7 @@ void decode()
   else if(opcode.to_ulong()==99)
   {
     imm[11] = Inst[7]; // immidiate of B type
+     imm[0]=0;
     for (int i = 0; i < 4; i++)
     {
       imm[i + 1] = Inst[i + 8];
@@ -178,12 +182,13 @@ void decode()
     }
     //immidiate of B type
   }
-  else if(opcode.to_ulong()==55 | opcode.to_ulong()==23)
+  else if(opcode.to_ulong()==55 || opcode.to_ulong()==23)
   {
-    for (int i = 0; i < 20; i++) // immidiate of U type
+    imm=Inst;
+    for (int i = 0; i < 12; i++) // immidiate of U type
     {
-      imm[i + 12] = Inst[i + 12];
-    }                   //immidiate of U type
+      imm[i] =0;
+    } // immidiate of U type
   }
   else if(opcode.to_ulong()==111)
   {
@@ -274,6 +279,12 @@ void execute()
         case 0: // addi
             resultALU = X[rs1.to_ulong()] + (int32_t)imm.to_ulong();
             break;
+         case 1: // slli
+         { 
+            bitset<5> b(imm.to_string(), 7, 11);
+           resultALU = X[rs1.to_ulong()] << b.to_ulong();
+             break;
+         }
         case 7: // andi
             resultALU = X[rs1.to_ulong()] & (int32_t)imm.to_ulong();
             break;
@@ -434,10 +445,13 @@ int main()
   while (1)
   {
     fetch();
+     if(!loop) break;
     decode();
     execute();
     mem();
     write_back();
   }
-
+ for (int i = 0; i < 32; i++){
+    cout << X[i] <<" ";
+  }
 }
