@@ -34,7 +34,7 @@ int resultALU,resultMEM;
 vector<int> X(32, 0);
 
 // memory
-vector<int> MEM(100000, 0);
+vector<int> MEM(40000, 0);
 
 // current instruction
 bitset<32> Inst,imm; // int i = stoul(p, nullptr, 16);
@@ -234,8 +234,18 @@ void execute()
                 resultALU = X[rs1.to_ulong()] - X[rs2.to_ulong()];
                 break;
             case 5: // sra
+                if (X[rs1.to_ulong()] >> 31 == 0)
                 resultALU = X[rs1.to_ulong()] >> X[rs2.to_ulong()];
-                break;
+             else
+              {
+              resultALU = X[rs1.to_ulong()];
+              for (int i = 0; i < X[rs2.to_ulong()]; i++)
+             {
+              resultALU >>= 1;
+              resultALU += pow(2, 31);
+             }
+            }
+        break;
             }
             break;
         case 0:
@@ -257,13 +267,7 @@ void execute()
                 resultALU = X[rs1.to_ulong()] << X[rs2.to_ulong()];
                 break;
             case 5: // srl
-                if (rs1[4] == 0)
-                    resultALU = X[rs1.to_ulong()] << X[rs2.to_ulong()];
-                else
-                {
-                    rs1[4] = 0;
-                    resultALU = -(X[rs1.to_ulong()] << X[rs2.to_ulong()]);
-                }
+                resultALU = X[rs1.to_ulong()] >> X[rs2.to_ulong()];
                 break;
             case 2: // slt
                 (X[rs1.to_ulong()] < X[rs2.to_ulong()]) ? resultALU = 1 : resultALU = 0;
@@ -296,15 +300,15 @@ void execute()
         switch (funct3.to_ulong())
         {
         case 0: // lb
-            resultALU = X[rs1.to_ulong()] + (int32_t)imm.to_ulong();
+            resultALU = (X[rs1.to_ulong()] + (int32_t)imm.to_ulong())/4;
             break;
 
         case 1: // lh
-            resultALU = X[rs1.to_ulong()] + (int32_t)imm.to_ulong();
+            resultALU = (X[rs1.to_ulong()] + (int32_t)imm.to_ulong())/4;
             break;
 
         case 2: // lw
-            resultALU = X[rs1.to_ulong()] + (int32_t)imm.to_ulong();
+            resultALU = (X[rs1.to_ulong()] + (int32_t)imm.to_ulong()/)4;
             break;
         }
         break; // load type operations
@@ -320,15 +324,15 @@ void execute()
         switch (funct3.to_ulong())
         {
         case 0: // sb
-            resultALU = X[rs1.to_ulong()] + (int32_t)imm.to_ulong();
+            resultALU = (X[rs1.to_ulong()] + (int32_t)imm.to_ulong())/4;
             break;
 
         case 1: // sh
-            resultALU = X[rs1.to_ulong()] + (int32_t)imm.to_ulong();
+            resultALU = (X[rs1.to_ulong()] + (int32_t)imm.to_ulong())/4;
             break;
 
         case 2: // sw
-            resultALU = X[rs1.to_ulong()] + (int32_t)imm.to_ulong();
+            resultALU = (X[rs1.to_ulong()] + (int32_t)imm.to_ulong())/4;
             break;
         }
         break;
@@ -451,7 +455,15 @@ int main()
     mem();
     write_back();
   }
- for (int i = 0; i < 32; i++){
-    cout << X[i] <<" ";
+ ofstream outputFile("output.txt");
+ outputFile<<"Values of resister's"<<endl;
+  for (int i = 0; i < X.size(); i++)
+  {
+    outputFile << "x" << i << " -> " << X[i] << endl;
+  }
+  outputFile<<"Values at the memory addresses"<<endl;
+  for (int i = 0; i < MEM.size(); i++)
+  {
+    outputFile << i << '\t' << MEM[i] << endl;
   }
 }
