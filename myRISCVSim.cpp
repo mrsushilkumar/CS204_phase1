@@ -10,7 +10,7 @@ Developer's Name:GYANENDRA MANI
 Developer's Entry number:2021csb1090
 Developer's Name:RAKESH
 Developer's Entry number:2021CSB1126
-Date:
+Date:13-3-2023
 
 */
 
@@ -24,23 +24,17 @@ Date:
 
 using namespace std;
 
-// current instruction
+// current instruction 
 int PC=0,loop=1;
 
 //result after execution
-
 int resultALU,resultMEM;
+
 // Register file
 vector<int> X(32, 0);
-// flags
-// memory
-// static unsigned char MEM[4000];
-vector<int> MEM(100000, 0);
 
-// intermediate datapath and control path signals
-static unsigned int instruction_word;
-static unsigned int operand1;
-static unsigned int operand2;
+// memory
+vector<int> MEM(100000, 0);
 
 // current instruction
 bitset<32> Inst,imm; // int i = stoul(p, nullptr, 16);
@@ -83,6 +77,7 @@ void fetch(){
     }
     FileName.close();
 }
+
 // reads the instruction register, reads operand1, operand2 fromo register file, decides the operation to be performed in execute stage
 void decode()
 {
@@ -152,7 +147,7 @@ void decode()
     else
     {
       for (int i = 12; i < 32; i++)
-      {
+      {`
         imm[i]=0;
       }
     }
