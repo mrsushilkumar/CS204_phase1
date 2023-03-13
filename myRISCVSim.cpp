@@ -4,8 +4,8 @@
 The project is developed as part of Computer Architecture class
 Project Name: Functional Simulator for subset of RISCV Processor
 
-Developer's Name:SUSHIL KUMAR
-Developer's Email id:2021csb1136@iitrpr.ac.in
+Developer's Name:SUSHIL KUMAR,GYANENDRA MANI
+Developer's Entry number:2021csb1136,2021csb1090
 Date:
 
 */
@@ -386,7 +386,8 @@ void write_back()
   case 19:// I type
     X[rd.to_ulong()] = resultALU;
     break;
-  case 3:// Load type    uncomplete
+  case 3:// Load type    
+   X[rd.to_ulong()] = resultMEM;
     break;
   case 99://B type
     switch (funct3.to_ulong())
