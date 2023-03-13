@@ -21,7 +21,7 @@ Date:
 using namespace std;
 
 // current instruction
-int PC=0;
+int PC=0,loop=1;
 
 //result after execution
 
