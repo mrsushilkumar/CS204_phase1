@@ -4,8 +4,12 @@
 The project is developed as part of Computer Architecture class
 Project Name: Functional Simulator for subset of RISCV Processor
 
-Developer's Name:SUSHIL KUMAR,GYANENDRA MANI
-Developer's Entry number:2021csb1136,2021csb1090
+Developer's Name:SUSHIL KUMAR
+Developer's Entry number:2021CSB1136
+Developer's Name:GYANENDRA MANI
+Developer's Entry number:2021csb1090
+Developer's Name:RAKESH
+Developer's Entry number:2021CSB1126
 Date:
 
 */
