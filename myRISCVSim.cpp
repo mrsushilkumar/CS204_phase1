@@ -456,7 +456,7 @@ int main()
     write_back();
   }
  ofstream outputFile("output.txt");
- outputFile<<"Values of resister's"<<endl;
+ outputFile<<"Values of register's"<<endl;
   for (int i = 0; i < X.size(); i++)
   {
     outputFile << "x" << i << " -> " << X[i] << endl;
