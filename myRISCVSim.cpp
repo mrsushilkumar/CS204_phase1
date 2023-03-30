@@ -147,7 +147,7 @@ void decode()
     else
     {
       for (int i = 12; i < 32; i++)
-      {`
+      {
         imm[i]=0;
       }
     }
@@ -308,7 +308,7 @@ void execute()
             break;
 
         case 2: // lw
-            resultALU = (X[rs1.to_ulong()] + (int32_t)imm.to_ulong()/)4;
+            resultALU = (X[rs1.to_ulong()] + (int32_t)imm.to_ulong())/4;
             break;
         }
         break; // load type operations
