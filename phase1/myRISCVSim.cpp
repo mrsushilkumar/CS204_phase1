@@ -284,7 +284,7 @@ void execute()
             break;
          case 1: // slli
          { 
-            bitset<5> b(imm.to_string(), 7, 11);
+            bitset<5> b(imm.to_string(), 27, 31);
            resultALU = X[rs1.to_ulong()] << b.to_ulong();
              break;
          }
@@ -456,14 +456,14 @@ int main()
     write_back();
   }
  ofstream outputFile("output.txt");
- outputFile<<"Values of register's"<<endl;
+ outputFile<<"\n"<<"Values of register's"<<"\n\n";
   for (int i = 0; i < X.size(); i++)
   {
     outputFile << "x" << i << " -> " << X[i] << endl;
   }
-  outputFile<<"Values at the memory addresses"<<endl;
+  outputFile<<"\n"<<"Values at the memory addresses"<<"\n\n";
   for (int i = 0; i < MEM.size(); i++)
   {
-    outputFile << i << '\t' << MEM[i] << endl;
+    outputFile << i << " -> "<< MEM[i] << endl;
   }
 }
