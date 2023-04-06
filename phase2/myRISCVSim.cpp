@@ -49,16 +49,14 @@ bitset<5> rd, rs1, rs2;
 
 bitset<3> funct3;
 
+int type;
+
 int Op1,Op2;
 int Op1_RFread,Op2_RFread;
 
 //control signals
 int BranchTargetSelect,ResultSelect,RFWrite,ALUOperation,OP2Select,MemOp;
 int Isbranch,branchOperation,branchAdd;
-
-int fp_BranchTargetSelect,fp_ResultSelect;
-int fp_RFWrite,fp_ALUOperation,fp_OP2Select,fp_MemOp,fp_Isbranch,fp_branchOperation;
-int fp_PC;
 
 int dp_BranchTargetSelect,dp_ResultSelect,dp_RFWrite,dp_ALUOperation,dp_OP2Select;
 int dp_MemOp,dp_Isbranch,dp_branchOperation;
@@ -132,6 +130,7 @@ void decode()
   Isbranch=0;
   MemOp=0;
   OP2Select=0;
+  type=0;
 
   for (int i = 0; i < 7; i++) // opcode
   {
@@ -194,6 +193,7 @@ void decode()
     ALUOperation=0;
     MemOp=1;
     OP2Select=1;
+    type=1;
     
     for (int i = 0; i < 12; i++)
     {
@@ -222,6 +222,7 @@ void decode()
     ALUOperation=0;
     MemOp=2;
     OP2Select=2;
+
 
     for (int i = 0; i < 5; i++)//immidiate
     {
@@ -369,7 +370,6 @@ void execute()
   {
     Op2=ImmU.to_ulong();
   }
-
 
 
 
