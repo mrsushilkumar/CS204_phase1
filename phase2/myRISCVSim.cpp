@@ -48,7 +48,6 @@ bitset<3> funct3;
 
 int Op1,Op2;
 
-int gun;
 
 //control signals
 int BranchTargetSelect,ResultSelect,RFWrite,ALUOperation,OP2Select,MemOp,Isbranch,branchOperation;
