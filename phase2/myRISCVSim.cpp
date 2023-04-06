@@ -28,6 +28,9 @@ using namespace std;
 // current instruction
 int PC = 0, loop = 1;
 
+//stages operator
+int IF,DE,EX,MA,WB;
+
 // result after execution
 int resultALU, resultMEM;
 
@@ -47,18 +50,27 @@ bitset<5> rd, rs1, rs2;
 bitset<3> funct3;
 
 int Op1,Op2;
-
+int Op1_RFread,Op2_RFread;
 
 //control signals
-int BranchTargetSelect,ResultSelect,RFWrite,ALUOperation,OP2Select,MemOp,Isbranch,branchOperation;
+int BranchTargetSelect,ResultSelect,RFWrite,ALUOperation,OP2Select,MemOp;
+int Isbranch,branchOperation,branchAdd;
 
-int fp_BranchTargetSelect,fp_ResultSelect,fp_RFWrite,fp_ALUOperation,fp_OP2Select,fp_MemOp,fp_Isbranch,fp_branchOperation;
+int fp_BranchTargetSelect,fp_ResultSelect;
+int fp_RFWrite,fp_ALUOperation,fp_OP2Select,fp_MemOp,fp_Isbranch,fp_branchOperation;
+int fp_PC;
 
-int dp_BranchTargetSelect,dp_ResultSelect,dp_RFWrite,dp_ALUOperation,dp_OP2Select,dp_MemOp,dp_Isbranch,dp_branchOperation;
+int dp_BranchTargetSelect,dp_ResultSelect,dp_RFWrite,dp_ALUOperation,dp_OP2Select;
+int dp_MemOp,dp_Isbranch,dp_branchOperation;
+int dp_PC;
 
-int ep_BranchTargetSelect,ep_ResultSelect,ep_RFWrite,ep_ALUOperation,ep_OP2Select,ep_MemOp,ep_Isbranch,ep_branchOperation;
+int ep_BranchTargetSelect,ep_ResultSelect,ep_RFWrite,ep_ALUOperation,ep_OP2Select;
+int ep_MemOp,ep_Isbranch,ep_branchOperation;
+int ep_PC;
 
-int mp_BranchTargetSelect,mp_ResultSelect,mp_RFWrite,mp_ALUOperation,mp_OP2Select,mp_MemOp,mp_Isbranch,mp_branchOperation;
+int mp_BranchTargetSelect,mp_ResultSelect,mp_RFWrite,mp_ALUOperation,mp_OP2Select;
+int mp_MemOp,mp_Isbranch,mp_branchOperation;
+int mp_PC;
 
 // it is used to set the reset values
 // reset all registers and memory content to 0
@@ -97,6 +109,21 @@ void fetch()
     }
   }
   FileName.close();
+  if (Isbranch==0)
+  {
+    PC=PC+4;
+  }
+  else if(Isbranch==1)
+  {
+    PC=branchAdd;
+  }
+  else
+  {
+    PC=resultALU;
+  }
+  
+  
+  
 }
 
 // reads the instruction register, reads operand1, operand2 from register file, decides the operation to be performed in execute stage
@@ -130,6 +157,9 @@ void decode()
   {
     funct7[i]=Inst[i];
   }
+
+  Op1_RFread=X[rs1.to_ulong()];
+
   //for immidiate and control signals
   switch (opcode.to_ulong())
   {
@@ -316,173 +346,37 @@ void decode()
       break;
     }
   }
-  
-  
-  
+  Op2_RFread=X[rs2.to_ulong()];
 
 }
 
 // executes the ALU operation based on ALUop
 void execute()
 {
-  switch (opcode.to_ulong()) // R type operations
+  if (OP2Select==0)
   {
-  case 51:
-    switch (funct7.to_ulong())
-    {
-    case 32:
-      switch (funct3.to_ulong())
-      {
-      case 0: // sub
-        resultALU = X[rs1.to_ulong()] - X[rs2.to_ulong()];
-        break;
-      case 5: // sra
-        if (X[rs1.to_ulong()] >> 31 == 0)
-          resultALU = X[rs1.to_ulong()] >> X[rs2.to_ulong()];
-        else
-        {
-          resultALU = X[rs1.to_ulong()];
-          for (int i = 0; i < X[rs2.to_ulong()]; i++)
-          {
-            resultALU >>= 1;
-            resultALU += pow(2, 31);
-          }
-        }
-        break;
-      }
-      break;
-    case 0:
-      switch (funct3.to_ulong())
-      {
-      case 0: // add
-        resultALU = X[rs1.to_ulong()] + X[rs2.to_ulong()];
-        break;
-      case 4: // xor
-        resultALU = X[rs1.to_ulong()] ^ X[rs2.to_ulong()];
-        break;
-      case 6: // or
-        resultALU = X[rs1.to_ulong()] | X[rs2.to_ulong()];
-        break;
-      case 7: // and
-        resultALU = X[rs1.to_ulong()] & X[rs2.to_ulong()];
-        break;
-      case 1: // sll
-        resultALU = X[rs1.to_ulong()] << X[rs2.to_ulong()];
-        break;
-      case 5: // srl
-        resultALU = X[rs1.to_ulong()] >> X[rs2.to_ulong()];
-        break;
-      case 2: // slt
-        (X[rs1.to_ulong()] < X[rs2.to_ulong()]) ? resultALU = 1 : resultALU = 0;
-        break;
-      }
-      break;
-    }
-    break; // R type end
-  case 19: // I type operation
-    switch (funct3.to_ulong())
-    {
-    case 0: // addi
-      resultALU = X[rs1.to_ulong()] + (int32_t)imm.to_ulong();
-      break;
-    case 1: // slli
-    {
-      bitset<5> b(imm.to_string(), 27, 31);
-      resultALU = X[rs1.to_ulong()] << b.to_ulong();
-      break;
-    }
-    case 7: // andi
-      resultALU = X[rs1.to_ulong()] & (int32_t)imm.to_ulong();
-      break;
-    case 6: // ori
-      resultALU = X[rs1.to_ulong()] | (int32_t)imm.to_ulong();
-      break;
-    }
-    break; // I type operations
-  case 3:  // load type operations
-    switch (funct3.to_ulong())
-    {
-    case 0: // lb
-      resultALU = (X[rs1.to_ulong()] + (int32_t)imm.to_ulong()) / 4;
-      break;
-
-    case 1: // lh
-      resultALU = (X[rs1.to_ulong()] + (int32_t)imm.to_ulong()) / 4;
-      break;
-
-    case 2: // lw
-      resultALU = (X[rs1.to_ulong()] + (int32_t)imm.to_ulong()) / 4;
-      break;
-    }
-    break;  // load type operations
-  case 103: // jalr
-    switch (funct3.to_ulong())
-    {
-    case 0: // jalr
-      resultALU = X[rs1.to_ulong()] + (int32_t)imm.to_ulong();
-      break;
-    }
-    break;
-  case 35: // S type operation
-    switch (funct3.to_ulong())
-    {
-    case 0: // sb
-      resultALU = (X[rs1.to_ulong()] + (int32_t)imm.to_ulong()) / 4;
-      break;
-
-    case 1: // sh
-      resultALU = (X[rs1.to_ulong()] + (int32_t)imm.to_ulong()) / 4;
-      break;
-
-    case 2: // sw
-      resultALU = (X[rs1.to_ulong()] + (int32_t)imm.to_ulong()) / 4;
-      break;
-    }
-    break;
-
-  case 99: // B type operations
-    switch (funct3.to_ulong())
-    {
-    case 0: // beq
-      resultALU = PC + (int32_t)imm.to_ulong();
-      break;
-    case 1: // bne
-      resultALU = PC + (int32_t)imm.to_ulong();
-      break;
-
-    case 4: // blt
-      resultALU = PC + (int32_t)imm.to_ulong();
-      break;
-
-    case 5: // bge
-      resultALU = PC + (int32_t)imm.to_ulong();
-      break;
-    }
-    break;
-  case 55: // U type (lui)
-    resultALU = (int32_t)imm.to_ulong();
-    break;
-  case 23: // U type (auipc)
-    resultALU = PC + (int32_t)imm.to_ulong();
-    break;
-  case 111: // J type (jal)
-    resultALU = PC + (int32_t)imm.to_ulong();
-    break;
-  default:
-    break;
+    Op2=Op2_RFread;
   }
+  else if (OP2Select==1)
+  {
+    Op2=ImmI.to_ulong();
+  }
+  else if (OP2Select==2)
+  {
+    Op2=ImmS.to_ulong();
+  }
+  else if (OP2Select==3)
+  {
+    Op2=ImmU.to_ulong();
+  }
+
+
+
+
 }
 // perform the memory operation
 void mem()
 {
-  if (opcode.to_ulong() == 3)
-  {
-    resultMEM = MEM[resultALU];
-  }
-  else if (opcode.to_ulong() == 35)
-  {
-    MEM[resultALU] = X[rs2.to_ulong()];
-  }
 }
 // writes the results back to register file
 void write_back()
