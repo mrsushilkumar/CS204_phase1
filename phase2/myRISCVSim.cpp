@@ -391,64 +391,22 @@ void mem()
 // writes the results back to register file
 void write_back()
 {
-  PC = PC + 4;
-  switch (opcode.to_ulong())
+  
+  switch (ResultSelect)
   {
-  case 51: // R type
-    X[rd.to_ulong()] = resultALU;
-    break;
-  case 19: // I type
-    X[rd.to_ulong()] = resultALU;
-    break;
-  case 3: // Load type
-    X[rd.to_ulong()] = resultMEM;
-    break;
-  case 99: // B type
-    switch (funct3.to_ulong())
-    {
-    case 0: // beq
-      if (X[rs1.to_ulong()] == X[rs2.to_ulong()])
-      {
-        PC = resultALU;
-      }
+  
+   case 1:
+        X[rd.to_ulong()]=PC+4;
+        break;
+   case 2:
+        X[rd.to_ulong()]=ResultMEM;
+       break; 
+   case 3:
+        X[rd.to_ulong()]=ResultALU;
+       break;
+   case 4:
+        X[rd.to_ulong()]=mp_immu;
       break;
-    case 1: // bne
-      if (X[rs1.to_ulong()] != X[rs2.to_ulong()])
-      {
-        PC = resultALU;
-      }
-      break;
-    case 4: // blt
-      if (X[rs1.to_ulong()] < X[rs2.to_ulong()])
-      {
-        PC = resultALU;
-      }
-      break;
-    case 5: // bge
-      if (X[rs1.to_ulong()] >= X[rs2.to_ulong()])
-      {
-        PC = resultALU;
-      }
-      break;
-    default:
-      break;
-    }
-    break;
-  case 111: // jal
-    X[rd.to_ulong()] = PC;
-    PC = resultALU;
-    break;
-  case 103: // jalr
-    X[rd.to_ulong()] = PC;
-    PC = resultALU;
-    break;
-  case 55: // lui
-    X[rd.to_ulong()] = resultALU;
-    break;
-  case 23: // auipc
-    X[rd.to_ulong()] = resultALU;
-    break;
-
   default:
     break;
   }
