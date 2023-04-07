@@ -1,4 +1,4 @@
-# CS204_phase1
+# CS204_phase2
 ## Input file
 In the Input file we have to put machine code of program whatever we have to performed.    
 we have some machine code of program( to  find nth fibbonacci number,bubble sort,sum of array )  
