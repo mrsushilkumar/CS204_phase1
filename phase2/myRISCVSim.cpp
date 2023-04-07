@@ -10,13 +10,14 @@ Developer's Name:GYANENDRA MANI
 Developer's Entry number:2021csb1090
 Developer's Name:RAKESH
 Developer's Entry number:2021CSB1126
-Date:13-3-2023
+Date:
 
 */
 
 /* myRISCVSim.cpp
-   Purpose of this file: implementation file for myRISCVSim
+   Purpose of this file: implementation file for myRISCVSim with pileline
 */
+
 #include<bitset>
 #include <iostream>
 #include <sstream>
@@ -24,6 +25,11 @@ Date:13-3-2023
 #include<fstream>
 
 using namespace std;
+
+//stalls and dependencies
+int stall,depend;
+//type of dependencies
+int data_dep,control_dep;
 
 // current instruction
 int PC = 0, loop = 1;
@@ -50,33 +56,32 @@ bitset<5> rd, rs1, rs2;
 bitset<3> funct3;
 
 int mtype;
-int Op1,Op2;
+int Op2;
 int Op1_RFread,Op2_RFread;
 
 //control signals
 int BranchTargetSelect,ResultSelect,RFWrite,ALUOperation,OP2Select,MemOp;
-int Isbranch,branchOperation,branchAdd;
+int Isbranch,branchAdd;
+
+//fetch stage
+int fp_PC;
+bitset<32> fp_Inst;
 
 //decode stage
 int dp_BranchTargetSelect,dp_ResultSelect,dp_RFWrite,dp_ALUOperation,dp_OP2Select;
-int dp_MemOp,dp_Isbranch,dp_branchOperation;
-int dp_ImmI,dp_ImmS,dp_ImmB,dp_ImmJ,dp_ImmU,dp_Op2_RFread,dp_Op1;
-int dp_mtype;
+int dp_MemOp,dp_Isbranch;
+int dp_ImmI,dp_ImmS,dp_ImmB,dp_ImmJ,dp_ImmU,dp_Op2_RFread;
+int dp_mtype,dp_Op2_RFread,dp_Op1,dp_rd;
 int dp_PC;
 
 //execute stage
-int ep_BranchTargetSelect,ep_ResultSelect,ep_RFWrite,ep_ALUOperation,ep_OP2Select;
-int ep_MemOp,ep_Isbranch,ep_branchOperation,dp_resultALU,ep_ImmU,mp_rd;
-int ep_ImmI,ep_ImmS,ep_ImmB,ep_ImmJ,ep_ImmU;
-int ep_mtype;
-int ep_PC;
+int ep_ResultSelect,ep_resultALU,ep_MemOp,ep_Isbranch;
+int ep_mtype,ep_Op2_RFread;
+int ep_PC,ep_rd;
 
 //memory stage
-int mp_BranchTargetSelect,mp_ResultSelect,mp_RFWrite,mp_ALUOperation,mp_OP2Select;
-int mp_MemOp,mp_Isbranch,mp_branchOperation,mp_resultALU,mp_ImmU,mp_rd;
-int mp_ImmI,mp_ImmS,mp_ImmB,mp_ImmJ,mp_ImmU;
-int mp_mtype;
-int mp_PC;
+int mp_resultALU,mp_resultMEM,mp_ResultSelect;
+int mp_PC,mp_rd;
 
 // it is used to set the reset values
 // reset all registers and memory content to 0
@@ -132,6 +137,7 @@ void fetch()
     }
   }
   FileName.close();
+  
   if (ep_Isbranch==0)
   {
     PC=PC+4;
@@ -140,9 +146,9 @@ void fetch()
   {
     PC=branchAdd;
   }
-  else
+  else if(ep_Isbranch==2)
   {
-    PC=resultALU;
+    PC=ep_resultALU;
   }
 
 }
@@ -156,30 +162,30 @@ void decode()
 
   for (int i = 0; i < 7; i++) // opcode
   {
-    opcode[i]=Inst[i];
+    opcode[i]=fp_Inst[i];
   }
   for (int i = 7; i < 12; i++) //rd
   {
-    rd[i]=Inst[i];
+    rd[i]=fp_Inst[i];
   }
   for (int i = 12; i < 14; i++) //funct3
   {
-    funct3[i]=Inst[i];
+    funct3[i]=fp_Inst[i];
   }
   for (int i = 15; i < 20; i++) //rs1
   {
-    rs1[i]=Inst[i];
+    rs1[i]=fp_Inst[i];
   }
   for (int i = 20; i < 25; i++) //rs2
   {
-    rs2[i]=Inst[i];
+    rs2[i]=fp_Inst[i];
   }
   for (int i = 25; i < 32; i++)  //funct7
   {
-    funct7[i]=Inst[i];
+    funct7[i]=fp_Inst[i];
   }
 
-  Op1_RFread=X[rs1.to_ulong()];
+  Op1_RFread = X[rs1.to_ulong()];
   mtype=funct3.to_ulong();
 
   //for immidiate and control signals
@@ -192,7 +198,7 @@ void decode()
     {
       for (int i = 0; i < 5; i++)
       {
-        ImmI[i]=Inst[i+20];
+        ImmI[i]=fp_Inst[i+20];
       }
       for (int i = 5; i < 32; i++)
       {
@@ -203,7 +209,7 @@ void decode()
     {
       for (int i = 0; i < 12; i++)
       {
-        ImmI[i]=Inst[i+20];
+        ImmI[i]=fp_Inst[i+20];
       }
       for (int i = 12; i < 32; i++)
       {
@@ -222,7 +228,7 @@ void decode()
     
     for (int i = 0; i < 12; i++)
     {
-      ImmI[i]=Inst[i+20];
+      ImmI[i]=fp_Inst[i+20];
     }
     for (int i = 12; i < 32; i++)
     {
@@ -233,12 +239,11 @@ void decode()
     ALUOperation=0;
     OP2Select=1;
     Isbranch=2;
-    branchOperation=2;
     RFWrite=1;
     
     for (int i = 0; i < 12; i++)
     {
-      ImmI[i]=Inst[i+20];
+      ImmI[i]=fp_Inst[i+20];
     }
     for (int i = 12; i < 32; i++)
     {
@@ -254,11 +259,11 @@ void decode()
 
     for (int i = 0; i < 5; i++)//immidiate
     {
-      ImmS[i]=Inst[i+7];
+      ImmS[i]=fp_Inst[i+7];
     }
     for (int i = 0; i < 7; i++)
     {
-      ImmS[i+5]=Inst[i+25];
+      ImmS[i+5]=fp_Inst[i+25];
     }
     for (int i = 12; i < 32; i++)
     {
@@ -271,16 +276,16 @@ void decode()
     RFWrite=0;
 
     ImmB[0]=0;
-    ImmB[11]=Inst[7];
+    ImmB[11]=fp_Inst[7];
     for (int i = 0; i < 4; i++)
     {
-      ImmB[i+1]=Inst[i+8];
+      ImmB[i+1]=fp_Inst[i+8];
     }
     for (int i = 0; i < 6; i++)
     {
-      ImmB[i+5]=Inst[i+25];
+      ImmB[i+5]=fp_Inst[i+25];
     }
-    ImmB[12]=Inst[31];
+    ImmB[12]=fp_Inst[31];
     for (int i = 13; i < 32; i++)
     {
       ImmB[i]=ImmB[12];
@@ -289,6 +294,7 @@ void decode()
   case 55://lui immidiate
     OP2Select=3;
     RFWrite=1;
+    ALUOperation=10;
 
     for (int i = 0; i < 12; i++)
     {
@@ -296,12 +302,13 @@ void decode()
     }
     for (int i = 0; i < 20; i++)
     {
-      ImmU[i+12]=Inst[i+12];
+      ImmU[i+12]=fp_Inst[i+12];
     }    
     break;
   case 23://auipc immididate
     OP2Select=3;
     RFWrite=1;
+    ALUOperation=9;
 
     for (int i = 0; i < 12; i++)
     {
@@ -309,7 +316,7 @@ void decode()
     }
     for (int i = 0; i < 20; i++)
     {
-      ImmU[i+12]=Inst[i+12];
+      ImmU[i+12]=fp_Inst[i+12];
     }
     break;
   case 111:// jal immidiate
@@ -320,14 +327,14 @@ void decode()
     ImmJ[0]=0;
     for (int i = 0; i < 8; i++)
     {
-      ImmJ[i+12]=Inst[i+12];
+      ImmJ[i+12]=fp_Inst[i+12];
     }
-    ImmJ[11]=Inst[20];
+    ImmJ[11]=fp_Inst[20];
     for (int i = 0; i < 10; i++)
     {
-      ImmJ[i+1]=Inst[i+21];
+      ImmJ[i+1]=fp_Inst[i+21];
     }
-    ImmJ[20]=Inst[31];
+    ImmJ[20]=fp_Inst[31];
     for (int i = 21; i < 32; i++)
     {
       ImmJ[i]=ImmJ[20];
@@ -402,6 +409,11 @@ void execute()
   {
     Op2=dp_ImmS;
   }
+  else if (dp_OP2Select==3)
+  {
+    Op2=dp_ImmU;
+  }
+  
 
 
   switch (dp_ALUOperation)
@@ -433,6 +445,12 @@ void execute()
   case 8:
     resultALU = (dp_Op1 < Op2 ? 1:0);
     break;
+  case 9:
+    resultALU = dp_PC + Op2;
+    break;
+  case 10:
+    resultALU = Op2;
+    break;
   
   default:
     break;
@@ -455,38 +473,103 @@ void execute()
 // perform the memory operation
 void mem()
 {
-   bitset<32>b1=resultALU;
-   bitset<16>b2(b1.to_string(), 16, 31);
-   bitset<8>b3(b1.to_string(), 24, 31);
-   if(MemOp==1){
-      switch(mtype){
-         case 0:
-            resultMEM=MEM[(int8_t)b3.to_ulong()];
-            break;
-         case 1:
-             resultMEM=MEM[(int16_t)b2.to_ulong()];
-            break;
-         case 2:
-             resultMEM=MEM[(int32_t)b1.to_ulong()];
-            break;
-         default:
-            break;
+   bitset<8> a1,a2,a3,a4;
+   bitset<16> b1;
+   bitset<32> c1;
+   if(ep_MemOp==1){
+      switch(ep_mtype)
+      {
+        case 0:
+          a1 = (int)(MEM[ep_resultALU]);
+          resultMEM = (int8_t)(a1.to_ulong());
+          break;
+        case 1:
+          a1 = (int)(MEM[ep_resultALU]);
+          a2 = (int)(MEM[ep_resultALU+1]);
+          for (int i = 0; i < 8; i++)
+          {
+            b1[i] = a1[i];
+          }
+          for (int i = 0; i < 8; i++)
+          {
+            b1[i+8] = a2[i];
+          }
+          resultMEM = (int16_t)(b1.to_ulong());
+          break;
+        case 2:
+          a1 = (int)(MEM[ep_resultALU]);
+          a2 = (int)(MEM[ep_resultALU+1]);
+          a2 = (int)(MEM[ep_resultALU+2]);
+          a2 = (int)(MEM[ep_resultALU+3]);
+          for (int i = 0; i < 8; i++)
+          {
+            c1[i] = a1[i];
+          }
+          for (int i = 0; i < 8; i++)
+          {
+            c1[i+8] = a2[i];
+          }
+          for (int i = 0; i < 8; i++)
+          {
+            c1[i+16] = a2[i];
+          }
+          for (int i = 0; i < 8; i++)
+          {
+            c1[i+24] = a2[i];
+          }
+          resultMEM = (int32_t)(c1.to_ulong());
+          break;
+        default:
+          break;
       }
-   }else if(MemOp==2){
-      switch(){
-           switch(mtype){
-         case 0:
-           MEM[(int8_t)b3.to_ulong()]=Op2_RFread;
-            break;
-         case 1:
-            MEM[(int816_t)b2.to_ulong()]=Op2_RFread;
-            break;
-         case 2:
-             MEM[(int32_t)b1.to_ulong()]=Op2_RFread;
-            break;
-         default:
-            break;
-      } 
+   }
+   else if(ep_MemOp==2)
+   {
+      switch(ep_mtype)
+      {
+        case 0:
+          a1 = (int8_t)ep_Op2_RFread;
+          MEM[ep_resultALU] = a1.to_ulong();
+          break;
+        case 1:
+          b1 = (int16_t)ep_Op2_RFread;
+          for (int i = 0; i < 8; i++)
+          {
+            a1[i] = b1[i];
+          }
+          for (int i = 0; i < 8; i++)
+          {
+            a2[i] = b1[i+8]; 
+          }
+          MEM[ep_resultALU] = a1.to_ulong();
+          MEM[ep_resultALU+1] = a2.to_ulong();
+          break;
+        case 2:
+          c1 = (int32_t)ep_Op2_RFread;
+          for (int i = 0; i < 8; i++)
+          {
+            a1[i] = c1[i];
+          }
+          for (int i = 0; i < 8; i++)
+          {
+            a2[i] = c1[i+8]; 
+          }
+          for (int i = 0; i < 8; i++)
+          {
+            a3[i] = c1[i+16];
+          }
+          for (int i = 0; i < 8; i++)
+          {
+            a4[i] = c1[i+24]; 
+          }
+          MEM[ep_resultALU] = a1.to_ulong();
+          MEM[ep_resultALU+1] = a2.to_ulong();
+          MEM[ep_resultALU+2] = a3.to_ulong();
+          MEM[ep_resultALU+3] = a4.to_ulong();
+          break;
+
+        default:
+          break;
       }
    }
 }
@@ -494,38 +577,116 @@ void mem()
 void write_back()
 {
   
-  switch (ResultSelect)
+  switch (mp_ResultSelect)
   {
   
    case 1:
-        X[mp_rd]=PC+4;
+        X[mp_rd] = mp_PC+4;
         break;
    case 2:
-        X[mp_rd]=resultMEM;
+        X[mp_rd]=mp_resultMEM;
        break; 
    case 3:
-        X[mp_rd]=resultALU;
+        X[mp_rd]=mp_resultALU;
        break;
-   case 4:
-        X[mp_rd]=mp_ImmU;
-      break;
   default:
     break;
   }
 }
 
+//hand shake function for pipeline
+void handshake()
+{
+  //MA/WA
+  mp_PC = ep_PC;
+  mp_rd =ep_rd;
+  mp_resultALU = ep_resultALU;
+  mp_ResultSelect = ep_ResultSelect;
+  mp_resultMEM = resultMEM;
+
+  //EX/MA
+  ep_PC = dp_PC;
+  ep_mtype = dp_mtype;
+  ep_MemOp = dp_MemOp;
+  ep_resultALU = resultALU;
+  ep_ResultSelect = dp_ResultSelect;
+  ep_Op2_RFread = dp_Op2_RFread;
+  ep_rd = dp_rd;
+
+  //DE/EX
+  dp_PC = fp_PC;
+  dp_OP2Select = OP2Select;
+  dp_Op2_RFread = Op2_RFread;
+  dp_ALUOperation = ALUOperation;
+  dp_BranchTargetSelect = BranchTargetSelect;
+  dp_mtype = mtype;
+  dp_ResultSelect = ResultSelect;
+  dp_MemOp = MemOp;
+  dp_RFWrite = RFWrite;
+  dp_Isbranch = Isbranch;
+  dp_Op1 = Op1_RFread;
+  dp_rd = (int32_t)rd.to_ulong();
+  dp_ImmI = (int32_t)ImmI.to_ulong();
+  dp_ImmS = (int32_t)ImmS.to_ulong();
+  dp_ImmU = (int32_t)ImmU.to_ulong();
+  dp_ImmJ = (int32_t)ImmJ.to_ulong();
+  dp_ImmB = (int32_t)ImmB.to_ulong();
+  
+  //IF/DE
+  fp_PC = PC;
+  fp_Inst = Inst;
+}
+
 int main()
 {
-
+  IF=1;
   while (1)
   {
-    fetch();
-    if (!loop)
-      break;
-    decode();
-    execute();
-    mem();
-    write_back();
+    if(WB==1)
+    {
+      write_back();
+    }
+    if(MA==1)
+    {
+      mem();
+      WB=1;
+    }
+    else
+    {
+      WB=0;
+    }
+    if(EX==1)
+    {
+      execute();
+      MA=1;
+    }
+    else
+    {
+      MA=0;
+    }
+    if(DE==1)
+    {
+      decode();
+      EX=1;
+    }
+    else
+    {
+      EX=0;
+    }
+    if (IF==1)
+    {
+      fetch();
+      if (!loop)
+      {
+        break;
+      }
+      DE=1;
+    }
+    else
+    {
+      DE=0;
+    }
+    handshake();
   }
   ofstream outputFile("output.txt");
   outputFile <<"\n"<< "Values of resister's" <<"\n\n";
