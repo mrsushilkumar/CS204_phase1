@@ -31,8 +31,12 @@ int stall,depend;
 //type of dependencies
 int data_dep,control_dep;
 
+int stay;
 // current instruction
-int PC = 0, loop = 1;
+int PC = 0,cycles=0,loop = 1;
+
+//stay
+int stay_if,stay_de,stay_ex,stay_ma;
 
 //stages operator
 int IF,DE,EX,MA,WB;
@@ -60,7 +64,7 @@ int Op2;
 int Op1_RFread,Op2_RFread;
 
 //control signals
-int BranchTargetSelect,ResultSelect,RFWrite,ALUOperation,OP2Select,MemOp;
+int BranchTargetSelect,ResultSelect,RFWrite,ALUOperation,OP1Select,OP2Select,MemOp;
 int Isbranch,branchAdd;
 
 //fetch stage
@@ -69,19 +73,19 @@ bitset<32> fp_Inst;
 
 //decode stage
 int dp_BranchTargetSelect,dp_ResultSelect,dp_RFWrite,dp_ALUOperation,dp_OP2Select;
-int dp_MemOp,dp_Isbranch;
-int dp_ImmI,dp_ImmS,dp_ImmB,dp_ImmJ,dp_ImmU,dp_Op2_RFread;
-int dp_mtype,dp_Op2_RFread,dp_Op1,dp_rd;
+int dp_MemOp,dp_Isbranch,dp_OP1Select;
+int dp_ImmI,dp_ImmS,dp_ImmB,dp_ImmJ,dp_ImmU;
+int dp_mtype,dp_Op2_RFread,dp_Op1,dp_rd,dp_rs1, dp_rs2;;
 int dp_PC;
 
 //execute stage
-int ep_ResultSelect,ep_resultALU,ep_MemOp,ep_Isbranch;
-int ep_mtype,ep_Op2_RFread;
-int ep_PC,ep_rd;
+int ep_ResultSelect,ep_resultALU,ep_MemOp,ep_Isbranch,ep_RFWrite;
+int ep_mtype,ep_Op2_RFread,ep_OP2Select,ep_OP1Select;
+int ep_PC,ep_rd,ep_rs1, ep_rs2;;
 
 //memory stage
 int mp_resultALU,mp_resultMEM,mp_ResultSelect;
-int mp_PC,mp_rd;
+int mp_PC,mp_rd,mp_rs1, mp_rs2,mp_OP2Select,mp_OP1Select,mp_RFWrite;
 
 // it is used to set the reset values
 // reset all registers and memory content to 0
@@ -142,13 +146,9 @@ void fetch()
   {
     PC=PC+4;
   }
-  else if(ep_Isbranch==1)
+  else if(ep_Isbranch)
   {
     PC=branchAdd;
-  }
-  else if(ep_Isbranch==2)
-  {
-    PC=ep_resultALU;
   }
 
 }
@@ -158,7 +158,7 @@ void decode()
 {
   Isbranch=0;
   MemOp=0;
-  OP2Select=0;
+  OP2Select=4;
 
   for (int i = 0; i < 7; i++) // opcode
   {
@@ -193,9 +193,10 @@ void decode()
   {
   case 19://type I
     OP2Select=1;
-
+    OP1Select=0;
     if (funct3.to_ulong()==1 || funct3.to_ulong()==5) //immidiate
     {
+    
       for (int i = 0; i < 5; i++)
       {
         ImmI[i]=fp_Inst[i+20];
@@ -225,6 +226,7 @@ void decode()
     mtype=1;
     RFWrite=1;
     ResultSelect = 2;
+    OP1Select=0;
     
     for (int i = 0; i < 12; i++)
     {
@@ -236,10 +238,12 @@ void decode()
     }
     break;
   case 103://jalr immidiate
-    ALUOperation=0;
+    ALUOperation=11;
     OP2Select=1;
+    BranchTargetSelect=2;
     Isbranch=2;
     RFWrite=1;
+    OP1Select=0;
     
     for (int i = 0; i < 12; i++)
     {
@@ -256,6 +260,7 @@ void decode()
     OP2Select=2;
     mtype=2;
     RFWrite=0;
+    OP1Select=0;
 
     for (int i = 0; i < 5; i++)//immidiate
     {
@@ -274,6 +279,8 @@ void decode()
     Isbranch=1;
     BranchTargetSelect=1;
     RFWrite=0;
+    ALUOperation =12;
+    OP1Select=0;
 
     ImmB[0]=0;
     ImmB[11]=fp_Inst[7];
@@ -295,6 +302,7 @@ void decode()
     OP2Select=3;
     RFWrite=1;
     ALUOperation=10;
+    OP1Select=1;
 
     for (int i = 0; i < 12; i++)
     {
@@ -309,6 +317,7 @@ void decode()
     OP2Select=3;
     RFWrite=1;
     ALUOperation=9;
+    OP1Select=1;
 
     for (int i = 0; i < 12; i++)
     {
@@ -323,6 +332,8 @@ void decode()
     Isbranch=1;
     BranchTargetSelect=0;
     RFWrite=1;
+    ALUOperation = 11;
+    OP1Select=1;
 
     ImmJ[0]=0;
     for (int i = 0; i < 8; i++)
@@ -343,10 +354,14 @@ void decode()
   default:
     break;
   }
-
+  if (opcode.to_ulong()==51)
+  {
+    OP2Select=0;
+  }
   if (opcode.to_ulong()==51 || opcode.to_ulong()==19)
   {
     RFWrite=1;
+    OP1Select=0;
     
     switch (funct3.to_ulong())
     {
@@ -451,20 +466,51 @@ void execute()
   case 10:
     resultALU = Op2;
     break;
-  
+  case 11:
+    resultALU = dp_PC + 4;
+  case 12:
+    
   default:
     break;
   }
-
+  int zero;
   switch (dp_BranchTargetSelect)
   {
   case 0:
     branchAdd = dp_PC + dp_ImmJ;
     break;
   case 1:
-    branchAdd = dp_PC + dp_ImmB;
+    switch (dp_mtype)
+    {
+    case 0:
+      zero = (dp_Op1 == dp_Op2_RFread)?0:1;
+      break;
+    case 1:
+      zero = (dp_Op1 != dp_Op2_RFread)?0:1;
+      break;
+    case 4:
+      zero = (dp_Op1 < dp_Op2_RFread)?0:1;
+      break;
+    case 5:
+      zero = (dp_Op1 >= dp_Op2_RFread)?0:1;
+      break;
+    
+    default:
+      break;
+    }
+
+    if (zero==0)
+    {
+      branchAdd = dp_PC +dp_ImmB;
+    }
+    else
+    {
+      branchAdd = dp_PC +dp_ImmB;
+    }
     break;
-  
+  case 2:
+    branchAdd = dp_Op1 + dp_ImmI;
+    break;
   default:
     break;
   }
@@ -592,49 +638,95 @@ void write_back()
   default:
     break;
   }
+  X[0]=0;
 }
 
 //hand shake function for pipeline
 void handshake()
 {
-  //MA/WA
-  mp_PC = ep_PC;
-  mp_rd =ep_rd;
-  mp_resultALU = ep_resultALU;
-  mp_ResultSelect = ep_ResultSelect;
-  mp_resultMEM = resultMEM;
+  if(MA==1)
+  {
+    //MA/WA
+    mp_PC = ep_PC;
+    mp_rd =ep_rd;
+    mp_rs1 =ep_rs1;
+    mp_rs2 =ep_rs2;
+    mp_resultALU = ep_resultALU;
+    mp_ResultSelect = ep_ResultSelect;
+    mp_resultMEM = resultMEM;
+    mp_OP2Select = ep_OP2Select;
+    mp_OP1Select = ep_OP1Select;
+  }
 
-  //EX/MA
-  ep_PC = dp_PC;
-  ep_mtype = dp_mtype;
-  ep_MemOp = dp_MemOp;
-  ep_resultALU = resultALU;
-  ep_ResultSelect = dp_ResultSelect;
-  ep_Op2_RFread = dp_Op2_RFread;
-  ep_rd = dp_rd;
+  if(EX==1)
+  {
+    //EX/MA
+    ep_PC = dp_PC;
+    ep_mtype = dp_mtype;
+    ep_MemOp = dp_MemOp;
+    ep_resultALU = resultALU;
+    ep_ResultSelect = dp_ResultSelect;
+    ep_RFWrite = dp_RFWrite;
+    ep_Op2_RFread = dp_Op2_RFread;
+    ep_rd = dp_rd;
+    ep_rs1 = dp_rs1;
+    ep_rs2 = dp_rs2;
+    ep_OP2Select = dp_OP2Select;
+    ep_OP1Select = dp_OP1Select;
+  }
 
-  //DE/EX
-  dp_PC = fp_PC;
-  dp_OP2Select = OP2Select;
-  dp_Op2_RFread = Op2_RFread;
-  dp_ALUOperation = ALUOperation;
-  dp_BranchTargetSelect = BranchTargetSelect;
-  dp_mtype = mtype;
-  dp_ResultSelect = ResultSelect;
-  dp_MemOp = MemOp;
-  dp_RFWrite = RFWrite;
-  dp_Isbranch = Isbranch;
-  dp_Op1 = Op1_RFread;
-  dp_rd = (int32_t)rd.to_ulong();
-  dp_ImmI = (int32_t)ImmI.to_ulong();
-  dp_ImmS = (int32_t)ImmS.to_ulong();
-  dp_ImmU = (int32_t)ImmU.to_ulong();
-  dp_ImmJ = (int32_t)ImmJ.to_ulong();
-  dp_ImmB = (int32_t)ImmB.to_ulong();
+  if(DE==1)
+  {
+    //DE/EX
+    dp_PC = fp_PC;
+    dp_OP2Select = OP2Select;
+    dp_OP1Select= OP1Select;
+    dp_Op2_RFread = Op2_RFread;
+    dp_ALUOperation = ALUOperation;
+    dp_BranchTargetSelect = BranchTargetSelect;
+    dp_mtype = mtype;
+    dp_ResultSelect = ResultSelect;
+    dp_MemOp = MemOp;
+    dp_RFWrite = RFWrite;
+    dp_Isbranch = Isbranch;
+    dp_Op1 = Op1_RFread;
+    dp_rd = (int32_t)rd.to_ulong();
+    dp_rs1 = (int32_t)rs1.to_ulong();
+    dp_rs2 = (int32_t)rs2.to_ulong();
+    dp_ImmI = (int32_t)ImmI.to_ulong();
+    dp_ImmS = (int32_t)ImmS.to_ulong();
+    dp_ImmU = (int32_t)ImmU.to_ulong();
+    dp_ImmJ = (int32_t)ImmJ.to_ulong();
+    dp_ImmB = (int32_t)ImmB.to_ulong();
+  }
   
-  //IF/DE
-  fp_PC = PC;
-  fp_Inst = Inst;
+  if(IF==1)
+  {
+    //IF/DE
+    fp_PC = PC;
+    fp_Inst = Inst;
+  }
+  //hazards
+  if (((ep_rd == dp_rs1 !=0 ) && (dp_OP1Select==0) || (ep_rd == dp_rs2 != 0 && dp_OP2Select == 0)) && (ep_RFWrite==1))
+  {
+    IF=0;
+    DE=0;
+    data_dep++;
+  }
+  else if (((mp_rd == dp_rs1 !=0 ) && (dp_OP1Select==0) || (mp_rd == dp_rs2 != 0 && dp_OP2Select == 0)) && (mp_RFWrite==1))
+  {
+    IF=0;
+    DE=0;
+    data_dep++;
+  }
+  else if(ep_Isbranch)
+  {
+    
+  }
+  
+  
+  
+
 }
 
 int main()
@@ -642,10 +734,19 @@ int main()
   IF=1;
   while (1)
   {
+    if(cycles==0)
+    {
+      handshake();
+    }
     if(WB==1)
     {
       write_back();
     }
+    else
+    {
+      WB=1;
+    }
+       
     if(MA==1)
     {
       mem();
@@ -654,6 +755,7 @@ int main()
     else
     {
       WB=0;
+      MA=1;
     }
     if(EX==1)
     {
@@ -663,6 +765,7 @@ int main()
     else
     {
       MA=0;
+      EX=1;
     }
     if(DE==1)
     {
@@ -672,6 +775,7 @@ int main()
     else
     {
       EX=0;
+      DE=1;
     }
     if (IF==1)
     {
@@ -685,8 +789,10 @@ int main()
     else
     {
       DE=0;
+      IF=1;
     }
-    handshake();
+
+    cycles++;
   }
   ofstream outputFile("output.txt");
   outputFile <<"\n"<< "Values of resister's" <<"\n\n";
