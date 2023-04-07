@@ -454,14 +454,19 @@ void execute()
 // perform the memory operation
 void mem()
 {
-   
+   bitset<32>b1=resultALU;
+   bitset<16>b2(b1.to_string(), 16, 31);
+   bitset<8>b3(b1.to_string(), 24, 31);
    if(MemOp==1){
       switch(mtype){
          case 0:
+            resultMEM=MEM[(int8_t)b3.to_ulong()];
             break;
          case 1:
+             resultMEM=MEM[b2(int16_t).to_ulong()];
             break;
          case 2:
+             resultMEM=MEM[b1(int32_t).to_ulong()];
             break;
          default:
             break;
@@ -470,10 +475,13 @@ void mem()
       switch(){
            switch(mtype){
          case 0:
+           MEM[(int8_t)b3.to_ulong()]=Op2_RFread;
             break;
          case 1:
+            MEM[(int816_t)b3.to_ulong()]=Op2_RFread;
             break;
          case 2:
+             MEM[(int32_t)b3.to_ulong()]=Op2_RFread;
             break;
          default:
             break;
