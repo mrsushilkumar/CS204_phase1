@@ -49,7 +49,7 @@ bitset<5> rd, rs1, rs2;
 
 bitset<3> funct3;
 
-int type;
+int mtype;
 
 int Op1,Op2;
 int Op1_RFread,Op2_RFread;
@@ -130,7 +130,7 @@ void decode()
   Isbranch=0;
   MemOp=0;
   OP2Select=0;
-  type=0;
+  mtype=0;
 
   for (int i = 0; i < 7; i++) // opcode
   {
@@ -158,6 +158,7 @@ void decode()
   }
 
   Op1_RFread=X[rs1.to_ulong()];
+  MemOp=funct3.to_ulong();
 
   //for immidiate and control signals
   switch (opcode.to_ulong())
@@ -193,7 +194,7 @@ void decode()
     ALUOperation=0;
     MemOp=1;
     OP2Select=1;
-    type=1;
+    mtype=1;
     
     for (int i = 0; i < 12; i++)
     {
@@ -222,6 +223,7 @@ void decode()
     ALUOperation=0;
     MemOp=2;
     OP2Select=2;
+    mtype=2;
 
 
     for (int i = 0; i < 5; i++)//immidiate
@@ -371,7 +373,15 @@ void execute()
     Op2=ImmU.to_ulong();
   }
 
-
+  switch (ALUOperation)
+  {
+  case 0:
+    resultALU = Op1 + Op2;
+    break;
+  
+  default:
+    break;
+  }
 
 }
 // perform the memory operation
