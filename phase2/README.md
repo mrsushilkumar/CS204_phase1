@@ -15,4 +15,4 @@ In the myRISCVSim.cpp all the functions(fetch(),decode(),execute(),mem(),writeba
 1-> save all the file in same folder (input.mc ,output.txt, myRISCVSim.cpp ).    
 2-> which fuction you have to perform make .mc file and save it in input file.  
 3-> open myRISCVSim.cpp file compile and run it.  
-4-> after running of programm all resister value and value at memory address updated in output text file.  
+4-> after running of programm the resister value and value at memory address and all the other information will updated in output text file.  
