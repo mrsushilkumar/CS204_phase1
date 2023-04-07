@@ -58,20 +58,43 @@ int Op1_RFread,Op2_RFread;
 int BranchTargetSelect,ResultSelect,RFWrite,ALUOperation,OP2Select,MemOp;
 int Isbranch,branchOperation,branchAdd;
 
+//decode stage
 int dp_BranchTargetSelect,dp_ResultSelect,dp_RFWrite,dp_ALUOperation,dp_OP2Select;
 int dp_MemOp,dp_Isbranch,dp_branchOperation;
+int dp_ImmI,dp_ImmS,dp_ImmB,dp_ImmJ,dp_ImmU;
 int dp_PC;
 
+//execute stage
 int ep_BranchTargetSelect,ep_ResultSelect,ep_RFWrite,ep_ALUOperation,ep_OP2Select;
-int ep_MemOp,ep_Isbranch,ep_branchOperation;
+int ep_MemOp,ep_Isbranch,ep_branchOperation,dp_resultALU,ep_ImmU,mp_rd;
+int ep_ImmI,ep_ImmS,ep_ImmB,ep_ImmJ,ep_ImmU;
 int ep_PC;
 
+//memory stage
 int mp_BranchTargetSelect,mp_ResultSelect,mp_RFWrite,mp_ALUOperation,mp_OP2Select;
-int mp_MemOp,mp_Isbranch,mp_branchOperation;
+int mp_MemOp,mp_Isbranch,mp_branchOperation,mp_resultALU,mp_ImmU,mp_rd;
+int mp_ImmI,mp_ImmS,mp_ImmB,mp_ImmJ,mp_ImmU;
 int mp_PC;
 
 // it is used to set the reset values
 // reset all registers and memory content to 0
+int shiftRL(int a,int b)
+{
+  bitset<32> t;
+  t=a;
+  if(b>=0)
+  {
+    for (int i = 0; i < 32-b; i++)
+    {
+      t[i]=t[i+b];
+    }
+    for (int i = 0; i < b; i++)
+    {
+      t[32-b+i]=0;
+    }
+  }
+  return t.to_ulong();
+}
 
 // reads from the instruction memory and updates the instruction register
 void fetch()
@@ -107,11 +130,11 @@ void fetch()
     }
   }
   FileName.close();
-  if (Isbranch==0)
+  if (ep_Isbranch==0)
   {
     PC=PC+4;
   }
-  else if(Isbranch==1)
+  else if(ep_Isbranch==1)
   {
     PC=branchAdd;
   }
@@ -119,9 +142,7 @@ void fetch()
   {
     PC=resultALU;
   }
-  
-  
-  
+
 }
 
 // reads the instruction register, reads operand1, operand2 from register file, decides the operation to be performed in execute stage
@@ -195,6 +216,8 @@ void decode()
     MemOp=1;
     OP2Select=1;
     mtype=1;
+    dp_RFWrite=1;
+    ResultSelect = 2;
     
     for (int i = 0; i < 12; i++)
     {
@@ -209,6 +232,8 @@ void decode()
     ALUOperation=0;
     OP2Select=1;
     Isbranch=2;
+    branchOperation=2;
+    dp_RFWrite=1;
     
     for (int i = 0; i < 12; i++)
     {
@@ -224,7 +249,7 @@ void decode()
     MemOp=2;
     OP2Select=2;
     mtype=2;
-
+    dp_RFWrite=0;
 
     for (int i = 0; i < 5; i++)//immidiate
     {
@@ -241,6 +266,8 @@ void decode()
     break;
   case 99://type B immidiate
     Isbranch=1;
+    BranchTargetSelect=1;
+    dp_RFWrite=0;
 
     ImmB[0]=0;
     ImmB[11]=Inst[7];
@@ -260,6 +287,7 @@ void decode()
     break;
   case 55://lui immidiate
     OP2Select=3;
+    dp_RFWrite=1;
 
     for (int i = 0; i < 12; i++)
     {
@@ -272,6 +300,7 @@ void decode()
     break;
   case 23://auipc immididate
     OP2Select=3;
+    dp_RFWrite=1;
 
     for (int i = 0; i < 12; i++)
     {
@@ -284,6 +313,8 @@ void decode()
     break;
   case 111:// jal immidiate
     Isbranch=1;
+    BranchTargetSelect=0;
+    dp_RFWrite=1;
 
     ImmJ[0]=0;
     for (int i = 0; i < 8; i++)
@@ -307,6 +338,7 @@ void decode()
 
   if (opcode.to_ulong()==51 || opcode.to_ulong()==19)
   {
+    dp_RFWrite=1;
     
     switch (funct3.to_ulong())
     {
@@ -356,7 +388,8 @@ void decode()
 // executes the ALU operation based on ALUop
 void execute()
 {
-  if (OP2Select==0)
+
+  if (dp_OP2Select==0)
   {
     Op2=Op2_RFread;
   }
@@ -368,15 +401,49 @@ void execute()
   {
     Op2=ImmS.to_ulong();
   }
-  else if (OP2Select==3)
-  {
-    Op2=ImmU.to_ulong();
-  }
 
-  switch (ALUOperation)
+
+  switch (dp_ALUOperation)
   {
   case 0:
     resultALU = Op1 + Op2;
+    break;
+  case 1:
+    resultALU = Op1 - Op2;
+    break;
+  case 2:
+    resultALU = Op1 ^ Op2;
+    break;
+  case 3:
+    resultALU = Op1 | Op2;
+    break;
+  case 4:
+    resultALU = Op1 & Op2;
+    break;
+  case 5:
+    resultALU = Op1 << Op2;
+    break;
+  case 6:
+    resultALU = shiftRL(Op1,Op2);
+    break;
+  case 7:
+    resultALU = Op1 >> Op2;
+    break;
+  case 8:
+    resultALU = (Op1 < Op2 ? 1:0);
+    break;
+  
+  default:
+    break;
+  }
+
+  switch (BranchTargetSelect)
+  {
+  case 0:
+    branchAdd = dp_PC + dp_ImmJ;
+    break;
+  case 1:
+    branchAdd = dp_PC + dp_ImmB;
     break;
   
   default:
@@ -387,6 +454,7 @@ void execute()
 // perform the memory operation
 void mem()
 {
+
 }
 // writes the results back to register file
 void write_back()
@@ -396,16 +464,16 @@ void write_back()
   {
   
    case 1:
-        X[rd.to_ulong()]=PC+4;
+        X[mp_rd]=PC+4;
         break;
    case 2:
-        X[rd.to_ulong()]=ResultMEM;
+        X[mp_rd]=resultMEM;
        break; 
    case 3:
-        X[rd.to_ulong()]=ResultALU;
+        X[mp_rd]=resultALU;
        break;
    case 4:
-        X[rd.to_ulong()]=mp_immu;
+        X[mp_rd]=mp_ImmU;
       break;
   default:
     break;
