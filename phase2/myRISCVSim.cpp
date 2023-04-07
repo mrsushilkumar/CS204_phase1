@@ -454,7 +454,32 @@ void execute()
 // perform the memory operation
 void mem()
 {
-
+   
+   if(MemOp==1){
+      switch(mtype){
+         case 0:
+            break;
+         case 1:
+            break;
+         case 2:
+            break;
+         default:
+            break;
+      }
+   }else if(MemOp==2){
+      switch(){
+           switch(mtype){
+         case 0:
+            break;
+         case 1:
+            break;
+         case 2:
+            break;
+         default:
+            break;
+      } 
+      }
+   }
 }
 // writes the results back to register file
 void write_back()
