@@ -463,10 +463,10 @@ void mem()
             resultMEM=MEM[(int8_t)b3.to_ulong()];
             break;
          case 1:
-             resultMEM=MEM[b2(int16_t).to_ulong()];
+             resultMEM=MEM[(int16_t)b2.to_ulong()];
             break;
          case 2:
-             resultMEM=MEM[b1(int32_t).to_ulong()];
+             resultMEM=MEM[(int32_t)b1.to_ulong()];
             break;
          default:
             break;
@@ -478,10 +478,10 @@ void mem()
            MEM[(int8_t)b3.to_ulong()]=Op2_RFread;
             break;
          case 1:
-            MEM[(int816_t)b3.to_ulong()]=Op2_RFread;
+            MEM[(int816_t)b2.to_ulong()]=Op2_RFread;
             break;
          case 2:
-             MEM[(int32_t)b3.to_ulong()]=Op2_RFread;
+             MEM[(int32_t)b1.to_ulong()]=Op2_RFread;
             break;
          default:
             break;
