@@ -50,7 +50,6 @@ bitset<5> rd, rs1, rs2;
 bitset<3> funct3;
 
 int mtype;
-
 int Op1,Op2;
 int Op1_RFread,Op2_RFread;
 
@@ -61,19 +60,22 @@ int Isbranch,branchOperation,branchAdd;
 //decode stage
 int dp_BranchTargetSelect,dp_ResultSelect,dp_RFWrite,dp_ALUOperation,dp_OP2Select;
 int dp_MemOp,dp_Isbranch,dp_branchOperation;
-int dp_ImmI,dp_ImmS,dp_ImmB,dp_ImmJ,dp_ImmU;
+int dp_ImmI,dp_ImmS,dp_ImmB,dp_ImmJ,dp_ImmU,dp_Op2_RFread,dp_Op1;
+int dp_mtype;
 int dp_PC;
 
 //execute stage
 int ep_BranchTargetSelect,ep_ResultSelect,ep_RFWrite,ep_ALUOperation,ep_OP2Select;
 int ep_MemOp,ep_Isbranch,ep_branchOperation,dp_resultALU,ep_ImmU,mp_rd;
 int ep_ImmI,ep_ImmS,ep_ImmB,ep_ImmJ,ep_ImmU;
+int ep_mtype;
 int ep_PC;
 
 //memory stage
 int mp_BranchTargetSelect,mp_ResultSelect,mp_RFWrite,mp_ALUOperation,mp_OP2Select;
 int mp_MemOp,mp_Isbranch,mp_branchOperation,mp_resultALU,mp_ImmU,mp_rd;
 int mp_ImmI,mp_ImmS,mp_ImmB,mp_ImmJ,mp_ImmU;
+int mp_mtype;
 int mp_PC;
 
 // it is used to set the reset values
@@ -151,7 +153,6 @@ void decode()
   Isbranch=0;
   MemOp=0;
   OP2Select=0;
-  mtype=0;
 
   for (int i = 0; i < 7; i++) // opcode
   {
@@ -179,7 +180,7 @@ void decode()
   }
 
   Op1_RFread=X[rs1.to_ulong()];
-  MemOp=funct3.to_ulong();
+  mtype=funct3.to_ulong();
 
   //for immidiate and control signals
   switch (opcode.to_ulong())
@@ -216,7 +217,7 @@ void decode()
     MemOp=1;
     OP2Select=1;
     mtype=1;
-    dp_RFWrite=1;
+    RFWrite=1;
     ResultSelect = 2;
     
     for (int i = 0; i < 12; i++)
@@ -233,7 +234,7 @@ void decode()
     OP2Select=1;
     Isbranch=2;
     branchOperation=2;
-    dp_RFWrite=1;
+    RFWrite=1;
     
     for (int i = 0; i < 12; i++)
     {
@@ -249,7 +250,7 @@ void decode()
     MemOp=2;
     OP2Select=2;
     mtype=2;
-    dp_RFWrite=0;
+    RFWrite=0;
 
     for (int i = 0; i < 5; i++)//immidiate
     {
@@ -267,7 +268,7 @@ void decode()
   case 99://type B immidiate
     Isbranch=1;
     BranchTargetSelect=1;
-    dp_RFWrite=0;
+    RFWrite=0;
 
     ImmB[0]=0;
     ImmB[11]=Inst[7];
@@ -287,7 +288,7 @@ void decode()
     break;
   case 55://lui immidiate
     OP2Select=3;
-    dp_RFWrite=1;
+    RFWrite=1;
 
     for (int i = 0; i < 12; i++)
     {
@@ -300,7 +301,7 @@ void decode()
     break;
   case 23://auipc immididate
     OP2Select=3;
-    dp_RFWrite=1;
+    RFWrite=1;
 
     for (int i = 0; i < 12; i++)
     {
@@ -314,7 +315,7 @@ void decode()
   case 111:// jal immidiate
     Isbranch=1;
     BranchTargetSelect=0;
-    dp_RFWrite=1;
+    RFWrite=1;
 
     ImmJ[0]=0;
     for (int i = 0; i < 8; i++)
@@ -338,7 +339,7 @@ void decode()
 
   if (opcode.to_ulong()==51 || opcode.to_ulong()==19)
   {
-    dp_RFWrite=1;
+    RFWrite=1;
     
     switch (funct3.to_ulong())
     {
@@ -391,53 +392,53 @@ void execute()
 
   if (dp_OP2Select==0)
   {
-    Op2=Op2_RFread;
+    Op2=dp_Op2_RFread;
   }
-  else if (OP2Select==1)
+  else if (dp_OP2Select==1)
   {
-    Op2=ImmI.to_ulong();
+    Op2=dp_ImmI;
   }
-  else if (OP2Select==2)
+  else if (dp_OP2Select==2)
   {
-    Op2=ImmS.to_ulong();
+    Op2=dp_ImmS;
   }
 
 
   switch (dp_ALUOperation)
   {
   case 0:
-    resultALU = Op1 + Op2;
+    resultALU = dp_Op1 + Op2;
     break;
   case 1:
-    resultALU = Op1 - Op2;
+    resultALU = dp_Op1 - Op2;
     break;
   case 2:
-    resultALU = Op1 ^ Op2;
+    resultALU = dp_Op1 ^ Op2;
     break;
   case 3:
-    resultALU = Op1 | Op2;
+    resultALU = dp_Op1 | Op2;
     break;
   case 4:
-    resultALU = Op1 & Op2;
+    resultALU = dp_Op1 & Op2;
     break;
   case 5:
-    resultALU = Op1 << Op2;
+    resultALU = dp_Op1 << Op2;
     break;
   case 6:
-    resultALU = shiftRL(Op1,Op2);
+    resultALU = shiftRL(dp_Op1,Op2);
     break;
   case 7:
-    resultALU = Op1 >> Op2;
+    resultALU = dp_Op1 >> Op2;
     break;
   case 8:
-    resultALU = (Op1 < Op2 ? 1:0);
+    resultALU = (dp_Op1 < Op2 ? 1:0);
     break;
   
   default:
     break;
   }
 
-  switch (BranchTargetSelect)
+  switch (dp_BranchTargetSelect)
   {
   case 0:
     branchAdd = dp_PC + dp_ImmJ;
