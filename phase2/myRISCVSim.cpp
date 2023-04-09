@@ -110,6 +110,15 @@ int shiftRL(int a,int b)
 // reads from the instruction memory and updates the instruction register
 void fetch()
 {
+  if (ep_Isbranch==0 && cycles!= 0)
+  {
+    PC=PC+4;
+  }
+  else if(ep_Isbranch)
+  {
+    PC=branchAdd;
+  }
+
   string x, s;
   stringstream ss;
   ss << hex << PC;
@@ -142,15 +151,6 @@ void fetch()
   }
   FileName.close();
   
-  if (ep_Isbranch==0)
-  {
-    PC=PC+4;
-  }
-  else if(ep_Isbranch)
-  {
-    PC=branchAdd;
-  }
-
 }
 
 // reads the instruction register, reads operand1, operand2 from register file, decides the operation to be performed in execute stage
