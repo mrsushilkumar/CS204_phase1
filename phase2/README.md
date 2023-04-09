@@ -1,11 +1,14 @@
-# CS204_phase2
+# CS204 Phase2
 ## Input file
-In the Input file we have to put machine code of program whatever we have to performed.    
-we have some machine code of program( to  find nth fibbonacci number,bubble sort,sum of array )  
+* In the input.mc file we have to put machine code for the instructions we want to execute.    
+* We have tested the machine code for the following programs :- 
+    * Finding nth fibonacci number
+    * Performing bubble sort on an array
+    * Finding sum of the elements of an array 
 
-## Output file
-In the Output text file we have update value of all the resister and value  memory address. 
-We have updated the values for several metrics including the total number of cycles, total instructions executed, CPI (cycles per instruction), number of data transfer instructions (load and store) executed, number of ALU instructions executed, number of control instructions executed, number of stalls, number of data hazards, and number of stalls due to control hazards.
+## Output files
+* In the 'output.txt' file we have displayed the values of all the registers and data memory. 
+* In the 'stats.txt' file, we have displayed the values for several metrics including the total number of cycles, total instructions executed, CPI (cycles per instruction), number of data transfer instructions (load and store) executed, number of ALU instructions executed, number of control instructions executed, number of stalls, number of data hazards, and number of stalls due to control hazards.
 
 ## myRISCVSim.cpp file
 In the myRISCVSim.cpp all the functions(fetch(),decode(),execute(),mem(),writeback(),handshake()) performed continuously untill instruction will not end.
