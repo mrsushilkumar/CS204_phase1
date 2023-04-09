@@ -149,7 +149,6 @@ void fetch()
   else if(ep_Isbranch)
   {
     PC=branchAdd;
-    DE=0;
   }
 
 }
