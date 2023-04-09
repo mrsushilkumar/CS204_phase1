@@ -75,13 +75,13 @@ bitset<32> fp_Inst;
 int dp_BranchTargetSelect,dp_ResultSelect,dp_RFWrite,dp_ALUOperation,dp_OP2Select;
 int dp_MemOp,dp_Isbranch,dp_OP1Select;
 int dp_ImmI,dp_ImmS,dp_ImmB,dp_ImmJ,dp_ImmU;
-int dp_mtype,dp_Op2_RFread,dp_Op1,dp_rd,dp_rs1, dp_rs2;;
+int dp_mtype,dp_Op2_RFread,dp_Op1,dp_rd,dp_rs1, dp_rs2;
 int dp_PC;
 
 //execute stage
 int ep_ResultSelect,ep_resultALU,ep_MemOp,ep_Isbranch,ep_RFWrite;
 int ep_mtype,ep_Op2_RFread,ep_OP2Select,ep_OP1Select;
-int ep_PC,ep_rd,ep_rs1, ep_rs2;;
+int ep_PC,ep_rd,ep_rs1, ep_rs2;
 
 //memory stage
 int mp_resultALU,mp_resultMEM,mp_ResultSelect;
