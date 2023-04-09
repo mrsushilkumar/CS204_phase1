@@ -127,7 +127,7 @@ void fetch()
       FileName >> x;
       if (FileName.eof())
       {
-        loop = 0;
+        IF=0;
         break;
       }
       if (x == s)
@@ -149,6 +149,7 @@ void fetch()
   else if(ep_Isbranch)
   {
     PC=branchAdd;
+    DE=0;
   }
 
 }
@@ -732,9 +733,9 @@ void handshake()
 int main()
 {
   IF=1;
-  while (1)
+  while (!(IF==DE==EX==MA==WB==0))
   {
-    if(cycles==0)
+    if(cycles!=0)
     {
       handshake();
     }
@@ -780,10 +781,6 @@ int main()
     if (IF==1)
     {
       fetch();
-      if (!loop)
-      {
-        break;
-      }
       DE=1;
     }
     else
