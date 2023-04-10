@@ -732,7 +732,7 @@ void handshake()
 int main()
 {
   IF=1;
-  while (!(IF==DE==EX==MA==WB==0))
+  while (!(IF==0&&DE==0&&EX==0&&MA==0&&WB==0))
   {
     if(cycles!=0)
     {
