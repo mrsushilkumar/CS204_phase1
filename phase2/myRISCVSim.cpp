@@ -29,7 +29,7 @@ using namespace std;
 //stalls and dependencies
 int stall,depend;
 //type of dependencies
-int data_dep,control_dep;
+bool data_H=false,control_H=false,flag_H=false;
 
 int stay;
 // current instruction
@@ -39,7 +39,7 @@ int PC = 0,cycles=0,loop = 1;
 int stay_if,stay_de,stay_ex,stay_ma;
 
 //stages operator
-int IF,DE,EX,MA,WB;
+int IF=1,DE=0,EX=0,MA=0,WB=0;
 
 // result after execution
 int resultALU, resultMEM;
@@ -107,6 +107,21 @@ int shiftRL(int a,int b)
   return t.to_ulong();
 }
 
+//resolve hazard
+void resolveH()
+{
+  if (flag_H==true && data_H!=true)
+  {
+    dp_Op1 = X[rs1.to_ulong()];
+    dp_Op2_RFread = X[rs2.to_ulong()];
+    EX=1;
+    DE=1;
+    IF=1;
+    flag_H=false;
+  }
+  
+}
+
 // reads from the instruction memory and updates the instruction register
 void fetch()
 {
@@ -114,7 +129,7 @@ void fetch()
   {
     PC=PC+4;
   }
-  else if(ep_Isbranch)
+  else if(ep_Isbranch && cycles!=0)
   {
     PC=branchAdd;
   }
@@ -136,7 +151,7 @@ void fetch()
       FileName >> x;
       if (FileName.eof())
       {
-        IF=0;
+        loop=0;
         break;
       }
       if (x == s)
@@ -505,7 +520,7 @@ void execute()
     }
     else
     {
-      branchAdd = dp_PC +dp_ImmB;
+      branchAdd = dp_PC + 4;
     }
     break;
   case 2:
@@ -707,32 +722,34 @@ void handshake()
     fp_Inst = Inst;
   }
   //hazards
+  data_H=false;
   if (((ep_rd == dp_rs1 !=0 ) && (dp_OP1Select==0) || (ep_rd == dp_rs2 != 0 && dp_OP2Select == 0)) && (ep_RFWrite==1))
   {
+    flag_H=true;
+    data_H=true;
     IF=0;
     DE=0;
-    data_dep++;
+    EX=0;
   }
   else if (((mp_rd == dp_rs1 !=0 ) && (dp_OP1Select==0) || (mp_rd == dp_rs2 != 0 && dp_OP2Select == 0)) && (mp_RFWrite==1))
   {
+    flag_H=true;
+    data_H=true;
     IF=0;
     DE=0;
-    data_dep++;
+    EX=0;
   }
   else if(ep_Isbranch)
   {
-    
+    DE=0;
+    EX=0;
   }
-  
-  
-  
-
+  resolveH();
 }
 
 int main()
 {
-  IF=1;
-  while (!(IF==0&&DE==0&&EX==0&&MA==0&&WB==0))
+  while ((IF!=0 || DE!=0 || EX!=0 || MA!=0 || WB!=0))
   {
     if(cycles!=0)
     {
@@ -741,55 +758,63 @@ int main()
     if(WB==1)
     {
       write_back();
-    }
-    else
-    {
-      WB=1;
+      cout<<cycles+1<<endl;
     }
        
     if(MA==1)
     {
       mem();
       WB=1;
+      cout<<cycles+1<<endl;
     }
     else
     {
       WB=0;
-      MA=1;
     }
     if(EX==1)
     {
       execute();
       MA=1;
+      cout<<cycles+1<<endl;
     }
     else
     {
       MA=0;
-      EX=1;
     }
     if(DE==1)
     {
       decode();
       EX=1;
+      cout<<cycles+1<<endl;
     }
     else
     {
       EX=0;
-      DE=1;
     }
     if (IF==1)
     {
       fetch();
       DE=1;
+      cout<<cycles+1<<endl;
     }
     else
     {
       DE=0;
       IF=1;
     }
-
+    if (loop==0)
+    {
+      IF=0;
+      cout<<"loop"<<endl;
+    }
+    cout<<cycles+1<<"till this."<<endl;
     cycles++;
   }
+
+  //test
+  cout<<cycles<<endl;
+  //test
+
   ofstream outputFile("output.txt");
   outputFile <<"\n"<< "Values of resister's" <<"\n\n";
   for (int i = 0; i < 32; i++)
@@ -799,6 +824,6 @@ int main()
   outputFile <<"\n"<< "Values at the memory addresses" <<"\n\n";
   for (int i = 0; i < 10000; i++)
   {
-    outputFile << i <<" -> "<< MEM[i] << endl;
+    outputFile << i <<" -> "<< (int8_t)MEM[i] << endl;
   }
 }
