@@ -917,6 +917,6 @@ int main()
   outputFile <<"\n"<< "Values at the memory addresses" <<"\n\n";
   for (int i = 0; i < 32000/4; i++)
   {
-    outputFile << hex<<i*4 <<" -> "<< (int)MEM[i*4]<<"   "<< (int)MEM[i*4+1]<<"   "<< (int)MEM[i*4+2]<<"   "<< (int)MEM[i*4+3] << endl;
+    outputFile << "0x"<<hex<<i*4 <<" -> "<< (int)MEM[i*4]<<"   "<< (int)MEM[i*4+1]<<"   "<< (int)MEM[i*4+2]<<"   "<< (int)MEM[i*4+3] << endl;
   }
 }
