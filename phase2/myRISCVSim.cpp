@@ -23,7 +23,7 @@ Date:
 #include <sstream>
 #include <string>
 #include<fstream>
-
+ 
 using namespace std;
 
 //stalls and dependencies
@@ -33,7 +33,8 @@ bool data_H=false,control_H=false,flag_H=false;
 
 int stay;
 // current instruction
-int PC = 0,cycles=0,loop = 1;
+int PC = 0,cycles=0;
+bool loop = false;
 
 //stay
 int stay_if,stay_de,stay_ex,stay_ma;
@@ -46,9 +47,8 @@ int resultALU, resultMEM;
 
 // Register file
 static int X[32];
-
 // memory
-static unsigned char MEM[10000];
+static unsigned char MEM[32000];
 
 // current instruction
 bitset<32> Inst,ImmI,ImmS,ImmB,ImmJ,ImmU; // int i = stoul(p, nullptr, 16);
@@ -122,6 +122,65 @@ void resolveH()
   
 }
 
+//reset pipeline buffer
+void resetIF()
+{
+  Inst=0;
+}
+
+void resetDE()
+{
+    dp_OP2Select = 0;
+    dp_OP1Select = 0;
+    dp_Op2_RFread = 0;
+    dp_ALUOperation = 0;
+    dp_BranchTargetSelect = 0;
+    dp_mtype = 0;
+    dp_ResultSelect = 0;
+    dp_MemOp = 0;
+    dp_RFWrite = 0;
+    dp_Isbranch = 0;
+    dp_Op1 = 0;
+    dp_rd = 0;
+    dp_rs1 = 0;
+    dp_rs2 = 0;
+    dp_ImmI = 0;
+    dp_ImmS = 0;
+    dp_ImmU = 0;
+    dp_ImmJ = 0;
+    dp_ImmB = 0;
+}
+
+void resetEX()
+{
+  ep_ResultSelect=0;
+  ep_resultALU=0;
+  ep_MemOp=0;
+  ep_Isbranch=0;
+  ep_RFWrite=0;
+  ep_mtype=0;
+  ep_Op2_RFread=0;
+  ep_OP2Select=0;
+  ep_OP1Select=0;
+  ep_PC=0;
+  ep_rd=0;
+  ep_rs1=0;
+  ep_rs2=0;
+}
+
+void resetMA()
+{
+  mp_ResultSelect=0;
+  mp_resultALU=0;
+  mp_RFWrite=0;
+  mp_OP2Select=0;
+  mp_OP1Select=0;
+  mp_PC=0;
+  mp_rd=0;
+  mp_rs1=0;
+  mp_rs2=0;
+}
+
 // reads from the instruction memory and updates the instruction register
 void fetch()
 {
@@ -129,7 +188,7 @@ void fetch()
   {
     PC=PC+4;
   }
-  else if(ep_Isbranch && cycles!=0)
+  else if(ep_Isbranch==1 && cycles!=0)
   {
     PC=branchAdd;
   }
@@ -146,12 +205,13 @@ void fetch()
   }
   else
   {
+    cout<<s<<" ";
     while (1)
     {
       FileName >> x;
       if (FileName.eof())
       {
-        loop=0;
+        loop=true;
         break;
       }
       if (x == s)
@@ -181,23 +241,23 @@ void decode()
   }
   for (int i = 7; i < 12; i++) //rd
   {
-    rd[i]=fp_Inst[i];
+    rd[i-7]=fp_Inst[i];
   }
   for (int i = 12; i < 14; i++) //funct3
   {
-    funct3[i]=fp_Inst[i];
+    funct3[i-12]=fp_Inst[i];
   }
   for (int i = 15; i < 20; i++) //rs1
   {
-    rs1[i]=fp_Inst[i];
+    rs1[i-15]=fp_Inst[i];
   }
   for (int i = 20; i < 25; i++) //rs2
   {
-    rs2[i]=fp_Inst[i];
+    rs2[i-20]=fp_Inst[i];
   }
   for (int i = 25; i < 32; i++)  //funct7
   {
-    funct7[i]=fp_Inst[i];
+    funct7[i-25]=fp_Inst[i];
   }
 
   Op1_RFread = X[rs1.to_ulong()];
@@ -256,9 +316,10 @@ void decode()
     ALUOperation=11;
     OP2Select=1;
     BranchTargetSelect=2;
-    Isbranch=2;
+    Isbranch=1;
     RFWrite=1;
     OP1Select=0;
+    ResultSelect=1;
     
     for (int i = 0; i < 12; i++)
     {
@@ -276,6 +337,7 @@ void decode()
     mtype=2;
     RFWrite=0;
     OP1Select=0;
+    ResultSelect=0;
 
     for (int i = 0; i < 5; i++)//immidiate
     {
@@ -296,6 +358,8 @@ void decode()
     RFWrite=0;
     ALUOperation =12;
     OP1Select=0;
+    ResultSelect=0;
+    OP2Select=0;
 
     ImmB[0]=0;
     ImmB[11]=fp_Inst[7];
@@ -318,6 +382,7 @@ void decode()
     RFWrite=1;
     ALUOperation=10;
     OP1Select=1;
+    ResultSelect=3;
 
     for (int i = 0; i < 12; i++)
     {
@@ -333,6 +398,7 @@ void decode()
     RFWrite=1;
     ALUOperation=9;
     OP1Select=1;
+    ResultSelect=3;
 
     for (int i = 0; i < 12; i++)
     {
@@ -349,6 +415,7 @@ void decode()
     RFWrite=1;
     ALUOperation = 11;
     OP1Select=1;
+    ResultSelect=1;
 
     ImmJ[0]=0;
     for (int i = 0; i < 8; i++)
@@ -377,6 +444,7 @@ void decode()
   {
     RFWrite=1;
     OP1Select=0;
+    ResultSelect=3;
     
     switch (funct3.to_ulong())
     {
@@ -671,7 +739,13 @@ void handshake()
     mp_resultMEM = resultMEM;
     mp_OP2Select = ep_OP2Select;
     mp_OP1Select = ep_OP1Select;
+    WB=1;
   }
+  else
+  {
+    WB=0;
+  }
+  
 
   if(EX==1)
   {
@@ -681,6 +755,7 @@ void handshake()
     ep_MemOp = dp_MemOp;
     ep_resultALU = resultALU;
     ep_ResultSelect = dp_ResultSelect;
+    ep_Isbranch=dp_Isbranch;
     ep_RFWrite = dp_RFWrite;
     ep_Op2_RFread = dp_Op2_RFread;
     ep_rd = dp_rd;
@@ -688,7 +763,13 @@ void handshake()
     ep_rs2 = dp_rs2;
     ep_OP2Select = dp_OP2Select;
     ep_OP1Select = dp_OP1Select;
+    MA=1;
   }
+  else
+  {
+    MA=0;
+  }
+  
 
   if(DE==1)
   {
@@ -713,101 +794,113 @@ void handshake()
     dp_ImmU = (int32_t)ImmU.to_ulong();
     dp_ImmJ = (int32_t)ImmJ.to_ulong();
     dp_ImmB = (int32_t)ImmB.to_ulong();
+    EX=1;
   }
+  else
+  {
+    EX=0;
+  }
+  
   
   if(IF==1)
   {
     //IF/DE
     fp_PC = PC;
     fp_Inst = Inst;
+    DE=1;
   }
+  else
+  {
+    DE=0;
+  }
+  
   //hazards
   data_H=false;
-  if (((ep_rd == dp_rs1 !=0 ) && (dp_OP1Select==0) || (ep_rd == dp_rs2 != 0 && dp_OP2Select == 0)) && (ep_RFWrite==1))
+  if (stay==1)
+  {
+    resetEX();
+  }
+  else if (stay==2)
+  {
+    resetMA();
+  }
+  
+  
+
+  if (stay==0 && ((ep_rd == dp_rs1 && ep_rd !=0 ) && (dp_OP1Select==0) || (ep_rd == dp_rs2 && ep_rd != 0 && dp_OP2Select == 0)) && (ep_RFWrite==1))
   {
     flag_H=true;
     data_H=true;
     IF=0;
     DE=0;
     EX=0;
+    stay=1;
   }
-  else if (((mp_rd == dp_rs1 !=0 ) && (dp_OP1Select==0) || (mp_rd == dp_rs2 != 0 && dp_OP2Select == 0)) && (mp_RFWrite==1))
+  else if (stay==1 && ((mp_rd == dp_rs1 && mp_rd !=0 ) && (dp_OP1Select==0) || (mp_rd == dp_rs2 && mp_rd != 0 && dp_OP2Select == 0)) && (mp_RFWrite==1))
   {
     flag_H=true;
     data_H=true;
     IF=0;
     DE=0;
     EX=0;
+    stay=2;
   }
-  else if(ep_Isbranch)
+  else if(ep_Isbranch == 1 )
   {
+    IF=1;
     DE=0;
     EX=0;
+    stay=3;
   }
+  else
+  {
+    stay=0;
+  }
+  
   resolveH();
 }
 
 int main()
 {
+  X[2]=31996;
   while ((IF!=0 || DE!=0 || EX!=0 || MA!=0 || WB!=0))
   {
-    if(cycles!=0)
-    {
-      handshake();
-    }
-    if(WB==1)
-    {
-      write_back();
-      cout<<cycles+1<<endl;
-    }
-       
-    if(MA==1)
-    {
-      mem();
-      WB=1;
-      cout<<cycles+1<<endl;
-    }
-    else
-    {
-      WB=0;
-    }
-    if(EX==1)
-    {
-      execute();
-      MA=1;
-      cout<<cycles+1<<endl;
-    }
-    else
-    {
-      MA=0;
-    }
-    if(DE==1)
-    {
-      decode();
-      EX=1;
-      cout<<cycles+1<<endl;
-    }
-    else
-    {
-      EX=0;
-    }
-    if (IF==1)
-    {
-      fetch();
-      DE=1;
-      cout<<cycles+1<<endl;
-    }
-    else
-    {
-      DE=0;
-      IF=1;
-    }
-    if (loop==0)
+    
+    
+    if (loop==true)
     {
       IF=0;
       cout<<"loop"<<endl;
     }
-    cout<<cycles+1<<"till this."<<endl;
+    if(WB==1)
+    {
+      write_back();
+      cout<<"wb ";
+    }
+
+    if(MA==1)
+    {
+      mem();
+      cout<<"ma ";
+    }
+    if(EX==1)
+    {
+      execute();
+      cout<<"ex ";
+    }
+    if(DE==1)
+    {
+      decode();
+      cout<<"de ";
+    }
+    if (IF==1)
+    {
+      fetch();
+      cout<<"if ";
+    }
+    handshake();
+
+    cout<< std::hex<< std::uppercase<<(int32_t)Inst.to_ulong() <<" "<<dp_rd<<" "<<ep_rd<<" "<<mp_rd<<endl;
     cycles++;
   }
 
@@ -822,8 +915,8 @@ int main()
     outputFile << "x" << i << " -> " << X[i] << endl;
   }
   outputFile <<"\n"<< "Values at the memory addresses" <<"\n\n";
-  for (int i = 0; i < 10000; i++)
+  for (int i = 0; i < 32000/4; i++)
   {
-    outputFile << i <<" -> "<< (int8_t)MEM[i] << endl;
+    outputFile << hex<<i*4 <<" -> "<< (int)MEM[i*4]<<"   "<< (int)MEM[i*4+1]<<"   "<< (int)MEM[i*4+2]<<"   "<< (int)MEM[i*4+3] << endl;
   }
 }
