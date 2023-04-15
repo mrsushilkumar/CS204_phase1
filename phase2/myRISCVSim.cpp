@@ -736,6 +736,7 @@ void handshake()
     mp_rs2 =ep_rs2;
     mp_resultALU = ep_resultALU;
     mp_ResultSelect = ep_ResultSelect;
+    mp_RFWrite = ep_RFWrite;
     mp_resultMEM = resultMEM;
     mp_OP2Select = ep_OP2Select;
     mp_OP1Select = ep_OP1Select;
