@@ -628,8 +628,8 @@ void mem()
         case 2:
           a1 = (int)(MEM[ep_resultALU]);
           a2 = (int)(MEM[ep_resultALU+1]);
-          a2 = (int)(MEM[ep_resultALU+2]);
-          a2 = (int)(MEM[ep_resultALU+3]);
+          a3 = (int)(MEM[ep_resultALU+2]);
+          a4 = (int)(MEM[ep_resultALU+3]);
           for (int i = 0; i < 8; i++)
           {
             c1[i] = a1[i];
@@ -640,11 +640,11 @@ void mem()
           }
           for (int i = 0; i < 8; i++)
           {
-            c1[i+16] = a2[i];
+            c1[i+16] = a3[i];
           }
           for (int i = 0; i < 8; i++)
           {
-            c1[i+24] = a2[i];
+            c1[i+24] = a4[i];
           }
           resultMEM = (int32_t)(c1.to_ulong());
           break;
