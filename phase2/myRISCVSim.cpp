@@ -80,7 +80,7 @@ int dp_PC;
 
 //execute stage
 int ep_ResultSelect,ep_resultALU,ep_MemOp,ep_Isbranch,ep_RFWrite;
-int ep_mtype,ep_Op2_RFread,ep_OP2Select,ep_OP1Select;
+int ep_mtype,ep_Op2_RFread,ep_OP2Select,ep_OP1Select,ep_branchAdd;
 int ep_PC,ep_rd,ep_rs1, ep_rs2;
 
 //memory stage
@@ -190,7 +190,7 @@ void fetch()
   }
   else if(ep_Isbranch==1 && cycles!=0)
   {
-    PC=branchAdd;
+    PC=ep_branchAdd;
   }
 
   string x, s;
@@ -211,7 +211,7 @@ void fetch()
       FileName >> x;
       if (FileName.eof())
       {
-        loop=true;
+        IF=0;
         break;
       }
       if (x == s)
@@ -755,6 +755,7 @@ void handshake()
     ep_mtype = dp_mtype;
     ep_MemOp = dp_MemOp;
     ep_resultALU = resultALU;
+    ep_branchAdd= branchAdd;
     ep_ResultSelect = dp_ResultSelect;
     ep_Isbranch=dp_Isbranch;
     ep_RFWrite = dp_RFWrite;
@@ -825,6 +826,12 @@ void handshake()
   {
     resetMA();
   }
+  else if (stay==3)
+  {
+    resetEX();
+    resetDE();
+  }
+  
   
   
 
@@ -835,15 +842,19 @@ void handshake()
     IF=0;
     DE=0;
     EX=0;
+    MA=1;
+    WB=1;
     stay=1;
   }
-  else if (stay==1 && ((mp_rd == dp_rs1 && mp_rd !=0 ) && (dp_OP1Select==0) || (mp_rd == dp_rs2 && mp_rd != 0 && dp_OP2Select == 0)) && (mp_RFWrite==1))
+  else if ((stay==1 || stay==0) && ((mp_rd == dp_rs1 && mp_rd !=0 ) && (dp_OP1Select==0) || (mp_rd == dp_rs2 && mp_rd != 0 && dp_OP2Select == 0)) && (mp_RFWrite==1))
   {
     flag_H=true;
     data_H=true;
     IF=0;
     DE=0;
     EX=0;
+    MA=1;
+    WB=1;
     stay=2;
   }
   else if(ep_Isbranch == 1 )
@@ -851,12 +862,17 @@ void handshake()
     IF=1;
     DE=0;
     EX=0;
+    MA=1;
+    WB=1;
     stay=3;
+    cout << "branch ";
   }
   else
   {
     stay=0;
   }
+
+  
   
   resolveH();
 }
@@ -867,12 +883,6 @@ int main()
   while ((IF!=0 || DE!=0 || EX!=0 || MA!=0 || WB!=0))
   {
     
-    
-    if (loop==true)
-    {
-      IF=0;
-      cout<<"loop"<<endl;
-    }
     if(WB==1)
     {
       write_back();
@@ -901,7 +911,7 @@ int main()
     }
     handshake();
 
-    cout<< std::hex<< std::uppercase<<(int32_t)Inst.to_ulong() <<" "<<dp_rd<<" "<<ep_rd<<" "<<mp_rd<<endl;
+    cout<<" "<<dp_rd<<" "<<ep_rd<<" "<<mp_rd<<endl;
     cycles++;
   }
 
