@@ -211,7 +211,8 @@ void fetch()
       FileName >> x;
       if (FileName.eof())
       {
-        IF=0;
+        loop =true;
+        resetIF();
         break;
       }
       if (x == s)
@@ -220,6 +221,7 @@ void fetch()
         x.erase(x.begin(), x.begin() + 2);
         unsigned int num = stoul(x, nullptr, 16);
         Inst = num;
+        loop = false;
         break;
       }
     }
@@ -243,7 +245,7 @@ void decode()
   {
     rd[i-7]=fp_Inst[i];
   }
-  for (int i = 12; i < 14; i++) //funct3
+  for (int i = 12; i < 15; i++) //funct3
   {
     funct3[i-12]=fp_Inst[i];
   }
@@ -818,6 +820,8 @@ void handshake()
   
   //hazards
   data_H=false;
+  
+  
   if (stay==1)
   {
     resetEX();
@@ -831,9 +835,7 @@ void handshake()
     resetEX();
     resetDE();
   }
-  
-  
-  
+
 
   if (stay==0 && ((ep_rd == dp_rs1 && ep_rd !=0 ) && (dp_OP1Select==0) || (ep_rd == dp_rs2 && ep_rd != 0 && dp_OP2Select == 0)) && (ep_RFWrite==1))
   {
@@ -842,8 +844,6 @@ void handshake()
     IF=0;
     DE=0;
     EX=0;
-    MA=1;
-    WB=1;
     stay=1;
   }
   else if ((stay==1 || stay==0) && ((mp_rd == dp_rs1 && mp_rd !=0 ) && (dp_OP1Select==0) || (mp_rd == dp_rs2 && mp_rd != 0 && dp_OP2Select == 0)) && (mp_RFWrite==1))
@@ -853,17 +853,13 @@ void handshake()
     IF=0;
     DE=0;
     EX=0;
-    MA=1;
-    WB=1;
     stay=2;
   }
-  else if(ep_Isbranch == 1 )
+  if(ep_Isbranch == 1 )
   {
     IF=1;
     DE=0;
     EX=0;
-    MA=1;
-    WB=1;
     stay=3;
     cout << "branch ";
   }
@@ -871,8 +867,6 @@ void handshake()
   {
     stay=0;
   }
-
-  
   
   resolveH();
 }
@@ -882,6 +876,11 @@ int main()
   X[2]=31996;
   while ((IF!=0 || DE!=0 || EX!=0 || MA!=0 || WB!=0))
   {
+    if (loop == true && ep_Isbranch == 0)
+    {
+      IF=0;
+    }
+    
     
     if(WB==1)
     {
