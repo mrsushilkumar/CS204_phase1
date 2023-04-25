@@ -27,7 +27,7 @@ Date:
 using namespace std;
 
 //stalls and dependencies
-int stall,depend;
+int stall,N_data,N_control;
 //type of dependencies
 bool data_H=false,control_H=false,flag_H=false;
 
@@ -37,7 +37,6 @@ int PC = 0,cycles=0;
 bool loop = false;
 
 //stay
-int stay_if,stay_de,stay_ex,stay_ma;
 
 //stages operator
 int IF=1,DE=0,EX=0,MA=0,WB=0;
@@ -48,7 +47,7 @@ int resultALU, resultMEM;
 // Register file
 static int X[32];
 // memory
-static unsigned char MEM[32000];
+static unsigned char MEM[132000];
 
 // current instruction
 bitset<32> Inst,ImmI,ImmS,ImmB,ImmJ,ImmU; // int i = stoul(p, nullptr, 16);
@@ -205,7 +204,6 @@ void fetch()
   }
   else
   {
-    cout<<s<<" ";
     while (1)
     {
       FileName >> x;
@@ -611,12 +609,12 @@ void mem()
       switch(ep_mtype)
       {
         case 0:
-          a1 = (int)(MEM[ep_resultALU]);
+          a1 = (int8_t)(MEM[ep_resultALU]);
           resultMEM = (int8_t)(a1.to_ulong());
           break;
         case 1:
-          a1 = (int)(MEM[ep_resultALU]);
-          a2 = (int)(MEM[ep_resultALU+1]);
+          a1 = (int8_t)(MEM[ep_resultALU]);
+          a2 = (int8_t)(MEM[ep_resultALU+1]);
           for (int i = 0; i < 8; i++)
           {
             b1[i] = a1[i];
@@ -628,10 +626,10 @@ void mem()
           resultMEM = (int16_t)(b1.to_ulong());
           break;
         case 2:
-          a1 = (int)(MEM[ep_resultALU]);
-          a2 = (int)(MEM[ep_resultALU+1]);
-          a3 = (int)(MEM[ep_resultALU+2]);
-          a4 = (int)(MEM[ep_resultALU+3]);
+          a1 = (int8_t)(MEM[ep_resultALU]);
+          a2 = (int8_t)(MEM[ep_resultALU+1]);
+          a3 = (int8_t)(MEM[ep_resultALU+2]);
+          a4 = (int8_t)(MEM[ep_resultALU+3]);
           for (int i = 0; i < 8; i++)
           {
             c1[i] = a1[i];
@@ -660,7 +658,7 @@ void mem()
       {
         case 0:
           a1 = (int8_t)ep_Op2_RFread;
-          MEM[ep_resultALU] = a1.to_ulong();
+          MEM[ep_resultALU] = (int8_t)a1.to_ulong();
           break;
         case 1:
           b1 = (int16_t)ep_Op2_RFread;
@@ -672,8 +670,8 @@ void mem()
           {
             a2[i] = b1[i+8]; 
           }
-          MEM[ep_resultALU] = a1.to_ulong();
-          MEM[ep_resultALU+1] = a2.to_ulong();
+          MEM[ep_resultALU] = (int8_t)a1.to_ulong();
+          MEM[ep_resultALU+1] = (int8_t)a2.to_ulong();
           break;
         case 2:
           c1 = (int32_t)ep_Op2_RFread;
@@ -693,10 +691,10 @@ void mem()
           {
             a4[i] = c1[i+24]; 
           }
-          MEM[ep_resultALU] = a1.to_ulong();
-          MEM[ep_resultALU+1] = a2.to_ulong();
-          MEM[ep_resultALU+2] = a3.to_ulong();
-          MEM[ep_resultALU+3] = a4.to_ulong();
+          MEM[ep_resultALU] = (int8_t)a1.to_ulong();
+          MEM[ep_resultALU+1] = (int8_t)a2.to_ulong();
+          MEM[ep_resultALU+2] = (int8_t)a3.to_ulong();
+          MEM[ep_resultALU+3] = (int8_t)a4.to_ulong();
           break;
 
         default:
@@ -845,6 +843,7 @@ void handshake()
     DE=0;
     EX=0;
     stay=1;
+    stall++;
   }
   else if ((stay==1 || stay==0) && ((mp_rd == dp_rs1 && mp_rd !=0 ) && (dp_OP1Select==0) || (mp_rd == dp_rs2 && mp_rd != 0 && dp_OP2Select == 0)) && (mp_RFWrite==1))
   {
@@ -854,6 +853,12 @@ void handshake()
     DE=0;
     EX=0;
     stay=2;
+    stall++;
+    N_data++;
+  }
+  else
+  {
+    stay=0;
   }
   if(ep_Isbranch == 1 )
   {
@@ -861,11 +866,8 @@ void handshake()
     DE=0;
     EX=0;
     stay=3;
-    cout << "branch ";
-  }
-  else
-  {
-    stay=0;
+    stall = stall + 2;
+    N_control++;
   }
   
   resolveH();
@@ -873,10 +875,10 @@ void handshake()
 
 int main()
 {
-  X[2]=31996;
+  X[2]=131996;
   while ((IF!=0 || DE!=0 || EX!=0 || MA!=0 || WB!=0))
   {
-    if (loop == true && ep_Isbranch == 0)
+     if (loop == true && ep_Isbranch == 0)
     {
       IF=0;
     }
@@ -885,37 +887,31 @@ int main()
     if(WB==1)
     {
       write_back();
-      cout<<"wb ";
     }
 
     if(MA==1)
     {
       mem();
-      cout<<"ma ";
     }
     if(EX==1)
     {
       execute();
-      cout<<"ex ";
     }
     if(DE==1)
     {
       decode();
-      cout<<"de ";
     }
     if (IF==1)
     {
       fetch();
-      cout<<"if ";
     }
     handshake();
 
-    cout<<" "<<dp_rd<<" "<<ep_rd<<" "<<mp_rd<<endl;
     cycles++;
   }
 
   //test
-  cout<<cycles<<endl;
+  cout<<"No. of cycles: "<<cycles<<"\n"<<"No. of data hazard: "<<N_data<<"\n"<<"No. of control hazard: "<<N_control<<endl;
   //test
 
   ofstream outputFile("output.txt");
@@ -925,8 +921,8 @@ int main()
     outputFile << "x" << i << " -> " << X[i] << endl;
   }
   outputFile <<"\n"<< "Values at the memory addresses" <<"\n\n";
-  for (int i = 0; i < 32000/4; i++)
+  for (int i = 0; i < 132000/4; i++)
   {
-    outputFile << "0x"<<hex<<i*4 <<" -> "<< (int)MEM[i*4]<<"   "<< (int)MEM[i*4+1]<<"   "<< (int)MEM[i*4+2]<<"   "<< (int)MEM[i*4+3] << endl;
+    outputFile << "0x"<<hex<<i*4 <<" -> "<< (int)MEM[i*4+3]<< "   "<< (int)MEM[i*4+2]<< "   "<< (int)MEM[i*4+1]<<"   "<<(int)MEM[i*4]<< endl;
   }
 }
