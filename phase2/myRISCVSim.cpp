@@ -824,10 +824,6 @@ void handshake()
   {
     resetEX();
   }
-  else if (stay==2)
-  {
-    resetMA();
-  }
   else if (stay==3)
   {
     resetEX();
